@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Puzzle Kebangsaan — Jigsaw Klasik</title>
+<title>Puzzle Kebangsaan — Jigsaw Klasik (Audio Latar)</title>
 <style>
   :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
   *{box-sizing:border-box}
@@ -48,6 +48,7 @@
     <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="audioArmBtn" class="btn">Bunyi: SEDIAKAN</button>
+    <button id="muteBtn" class="btn">🔇 Mute</button>
   </div>
 </header>
 
@@ -72,7 +73,7 @@
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk benarkan audio dimainkan automatik bila puzzle siap.</footer>
+<footer>Tip iPad: muat naik MP3 ➜ tekan <b>Bunyi: SEDIAKAN</b> sekali (unlock audio) ➜ <b>Mula Puzzle</b> untuk mula lagu latar.</footer>
 
 <script>
 /* ===== util ===== */
@@ -91,6 +92,7 @@ addEventListener("resize",resizeCanvas);
 
 /* ===== state ===== */
 let img=null, mp3=null, audio=new Audio(), audioCtx=null, ding=null;
+let armed=false, isPlayingBG=false;        // audio flags
 let rows=2, cols=4, pieces=[], slots=[];
 let OX=0, OY=0, CELLW=0, CELLH=0, dragging=null, offX=0, offY=0, showPreview=false;
 
@@ -101,23 +103,65 @@ $("#imgInput").addEventListener("change",e=>{
   r.onload=ev=>{ img=new Image(); img.onload=()=>{toast("Gambar dimuat naik."); draw();}; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
-$("#mp3Input").addEventListener("change",e=>{ mp3=e.target.files[0]?URL.createObjectURL(e.target.files[0]):null; if(mp3){audio.src=mp3; toast("MP3 dimuat naik.");}});
+$("#mp3Input").addEventListener("change",e=>{
+  const file=e.target.files[0]; if(!file){ mp3=null; return; }
+  mp3=URL.createObjectURL(file);
+  audio.src=mp3; audio.loop=true; audio.volume=0; // fade-in nanti
+  toast("MP3 dimuat naik.");
+});
+
+/* ===== audio unlock / controls ===== */
 $("#audioArmBtn").onclick=async()=>{
   try{
-    if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
-    // unlock + sediakan 'ding'
-    const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='sine'; o.frequency.value=880;
-    g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.2,audioCtx.currentTime+0.02);
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==="suspended") await audioCtx.resume();
+
+    // bunyi ringkas utk unlock
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sine'; o.frequency.value=880;
+    g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.2,audioCtx.currentTime+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.25);
     o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.26);
-    window.ding=()=>{ const o2=audioCtx.createOscillator(), g2=audioCtx.createGain(); o2.type='triangle'; o2.frequency.value=990;
-      g2.gain.setValueAtTime(0.0001,audioCtx.currentTime); g2.gain.linearRampToValueAtTime(0.25,audioCtx.currentTime+0.02);
+
+    // pra-main mp3 0.2s (wajib utk Safari)
+    if(mp3){
+      audio.currentTime=0;
+      await audio.play();
+      await new Promise(r=>setTimeout(r,200));
+      audio.pause(); audio.currentTime=0;
+    }
+    // pastikan resume bila ada sentuhan
+    ["touchstart","pointerdown","click"].forEach(ev=>{
+      window.addEventListener(ev, async ()=>{ if(audioCtx?.state==="suspended") await audioCtx.resume(); }, {passive:true});
+    });
+
+    // sediakan ding
+    const makeDing=()=>{ const o2=audioCtx.createOscillator(), g2=audioCtx.createGain();
+      o2.type='triangle'; o2.frequency.value=990;
+      g2.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+      g2.gain.linearRampToValueAtTime(0.25,audioCtx.currentTime+0.02);
       g2.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.30);
       o2.connect(g2).connect(audioCtx.destination); o2.start(); o2.stop(audioCtx.currentTime+0.32); };
-    if(mp3){ audio.src=mp3; await audio.play(); await new Promise(r=>setTimeout(r,120)); audio.pause(); audio.currentTime=0; }
-    toast("Audio sedia.");
-  }catch{ toast("Sentuh sekali lagi (iPad)."); }
+    window.ding=makeDing;
+
+    armed=true; toast("Audio sedia. Lagu akan bermula bila anda tekan Mula Puzzle.");
+  }catch{ toast("Sentuh sekali lagi (iPad)"); }
 };
+
+// mute
+$("#muteBtn").onclick=()=>{
+  if(!mp3 || !armed) return;
+  audio.muted = !audio.muted;
+  $("#muteBtn").textContent = audio.muted ? "🔊 Unmute" : "🔇 Mute";
+};
+
+// resume bila kembali ke tab
+document.addEventListener("visibilitychange", async ()=>{
+  if(document.visibilityState==="visible" && isPlayingBG && audio.paused){
+    try{ await audio.play(); }catch{}
+  }
+});
 
 /* ===== controls ===== */
 const mapping={8:[2,4],12:[3,4],16:[4,4],24:[3,8],36:[4,9]};
@@ -126,74 +170,71 @@ $("#piecesSel").onchange=e=>{ [rows,cols]=mapping[+e.target.value]; };
 $("#previewBtn").onclick=()=>{ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); if(img) renderMini(); };
 $("#prevSize").oninput=()=>renderMini();
 
-$("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} buildPuzzle(); };
-$("#shuffleBtn").onclick=shuffle;
+$("#startBtn").onclick=async()=>{
+  if(!img){toast("Muat naik gambar dahulu."); return;}
+  buildPuzzle();
+  // mula lagu latar
+  if(mp3 && armed){
+    try{
+      if(audio.paused) await audio.play();
+      isPlayingBG=true;
+      const target=0.7; audio.volume=0;
+      const id=setInterval(()=>{ audio.volume=Math.min(target, audio.volume+0.07); if(audio.volume>=target) clearInterval(id); },60);
+    }catch{}
+  }
+};
+$("#shuffleBtn").onclick=()=>{ // Kacau + fade out lagu
+  if(isPlayingBG){
+    const id=setInterval(()=>{ audio.volume=Math.max(0, audio.volume-0.08);
+      if(audio.volume<=0){ clearInterval(id); audio.pause(); isPlayingBG=false; } },60);
+  }
+  shuffle();
+};
 
-/* ===== bentuk jigsaw klasik (knob bulat penuh + bevel) ===== */
-const TAB = 0.23;   // saiz knob relatif (0.18–0.26 elok)
-const NECK = 0.38;  // leher (ketirusan)
+/* ===== bentuk jigsaw klasik (knob bulat + bevel) ===== */
+const TAB = 0.23, NECK = 0.38;
 function pathJigsaw(ctx, x, y, w, h, edges){
-  const r = Math.min(w,h)*TAB;
-  const neck = r*NECK;
-  // helper bezier “bulat penuh”
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-
-  // TOP
-  if(edges.top===0){ ctx.lineTo(x+w, y); }
-  else{
-    const d=edges.top; // 1 tanduk, -1 lekuk
-    const cy=y - d*r;
-    ctx.lineTo(x+w/2-r, y);
-    ctx.bezierCurveTo(x+w/2-neck, y, x+w/2-neck, y - d*neck*0.55, x+w/2, cy);
-    ctx.bezierCurveTo(x+w/2+neck, y - d*neck*0.55, x+w/2+neck, y, x+w/2+r, y);
-    ctx.lineTo(x+w, y);
+  const r = Math.min(w,h)*TAB, neck=r*NECK;
+  ctx.beginPath(); ctx.moveTo(x,y);
+  if(edges.top===0){ ctx.lineTo(x+w,y); }
+  else{ const d=edges.top, cy=y-d*r;
+    ctx.lineTo(x+w/2-r,y);
+    ctx.bezierCurveTo(x+w/2-neck,y, x+w/2-neck,y-d*neck*0.55, x+w/2,cy);
+    ctx.bezierCurveTo(x+w/2+neck,y-d*neck*0.55, x+w/2+neck,y, x+w/2+r,y);
+    ctx.lineTo(x+w,y);
   }
-
-  // RIGHT
-  if(edges.right===0){ ctx.lineTo(x+w, y+h); }
-  else{
-    const d=edges.right;
-    const cx=x+w + d*r;
-    ctx.lineTo(x+w, y+h/2-r);
-    ctx.bezierCurveTo(x+w, y+h/2-neck, x+w + d*neck*0.55, y+h/2-neck, cx, y+h/2);
-    ctx.bezierCurveTo(x+w + d*neck*0.55, y+h/2+neck, x+w, y+h/2+neck, x+w, y+h/2+r);
-    ctx.lineTo(x+w, y+h);
+  if(edges.right===0){ ctx.lineTo(x+w,y+h); }
+  else{ const d=edges.right, cx=x+w+d*r;
+    ctx.lineTo(x+w,y+h/2-r);
+    ctx.bezierCurveTo(x+w,y+h/2-neck, x+w+d*neck*0.55,y+h/2-neck, cx,y+h/2);
+    ctx.bezierCurveTo(x+w+d*neck*0.55,y+h/2+neck, x+w,y+h/2+neck, x+w,y+h/2+r);
+    ctx.lineTo(x+w,y+h);
   }
-
-  // BOTTOM
-  if(edges.bottom===0){ ctx.lineTo(x, y+h); }
-  else{
-    const d=edges.bottom;
-    const cy=y+h + d*r;
-    ctx.lineTo(x+w/2+r, y+h);
-    ctx.bezierCurveTo(x+w/2+neck, y+h, x+w/2+neck, y+h + d*neck*0.55, x+w/2, cy);
-    ctx.bezierCurveTo(x+w/2-neck, y+h + d*neck*0.55, x+w/2-neck, y+h, x+w/2-r, y+h);
-    ctx.lineTo(x, y+h);
+  if(edges.bottom===0){ ctx.lineTo(x,y+h); }
+  else{ const d=edges.bottom, cy=y+h+d*r;
+    ctx.lineTo(x+w/2+r,y+h);
+    ctx.bezierCurveTo(x+w/2+neck,y+h, x+w/2+neck,y+h+d*neck*0.55, x+w/2,cy);
+    ctx.bezierCurveTo(x+w/2-neck,y+h+d*neck*0.55, x+w/2-neck,y+h, x+w/2-r,y+h);
+    ctx.lineTo(x,y+h);
   }
-
-  // LEFT
   if(edges.left===0){ ctx.closePath(); }
-  else{
-    const d=edges.left;
-    const cx=x - d*r;
-    ctx.lineTo(x, y+h/2+r);
-    ctx.bezierCurveTo(x, y+h/2+neck, x - d*neck*0.55, y+h/2+neck, cx, y+h/2);
-    ctx.bezierCurveTo(x - d*neck*0.55, y+h/2-neck, x, y+h/2-neck, x, y+h/2-r);
+  else{ const d=edges.left, cx=x-d*r;
+    ctx.lineTo(x,y+h/2+r);
+    ctx.bezierCurveTo(x,y+h/2+neck, x-d*neck*0.55,y+h/2+neck, cx,y+h/2);
+    ctx.bezierCurveTo(x-d*neck*0.55,y+h/2-neck, x,y+h/2-neck, x,y+h/2-r);
     ctx.closePath();
   }
 }
 
 /* ===== bina puzzle ===== */
-let scale=1;
+let piecesBuilt=false;
 function buildPuzzle(){
-  pieces=[]; slots=[];
+  pieces=[]; slots=[]; piecesBuilt=true;
   const margin=20, boxW=W-margin*2, boxH=H-margin*2;
   const rImg=img.width/img.height, rBox=boxW/boxH;
   let tW,tH; if(rImg>rBox){tW=boxW; tH=boxW/rImg;} else {tH=boxH; tW=boxH*rImg;}
-  scale=tW/img.width; OX=(W-tW)/2; OY=(H-tH)/2; CELLW=tW/cols; CELLH=tH/rows;
+  OX=(W-tW)/2; OY=(H-tH)/2; CELLW=tW/cols; CELLH=tH/rows;
 
-  // tab/lekuk padan
   const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
   const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
   for(let r=0;r<rows;r++) for(let c=0;c<cols-1;c++) tabsH[r][c]=(Math.random()>.5?1:-1);
@@ -209,44 +250,37 @@ function buildPuzzle(){
 
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    // render setiap keping ke bitmap
     const PAD=0.28, cw=Math.ceil(CELLW*(1+PAD*2)), ch=Math.ceil(CELLH*(1+PAD*2));
     const bmp=document.createElement('canvas'); bmp.width=cw; bmp.height=ch;
     const g=bmp.getContext('2d'); g.imageSmoothingQuality='high'; g.lineJoin='round'; g.lineCap='round';
     const ox=CELLW*PAD, oy=CELLH*PAD;
 
-    // bentuk
     pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right});
-    // klip & isi imej
     g.save(); g.clip();
     const sx=c*sW, sy=r*sH; g.drawImage(img, sx, sy, sW, sH, ox, oy, CELLW, CELLH);
     g.restore();
 
-    // bevel / stroke
-    // highlight halus di atas-kiri
-    g.save();
-    g.clip(); g.globalCompositeOperation='multiply';
+    // bevel + stroke
+    g.save(); g.clip(); g.globalCompositeOperation='multiply';
     const grad=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
     grad.addColorStop(0,'rgba(255,255,255,.15)'); grad.addColorStop(1,'rgba(0,0,0,.15)');
-    g.fillStyle=grad; g.fillRect(ox-2,oy-2,CELLW+4,CELLH+4);
-    g.restore();
+    g.fillStyle=grad; g.fillRect(ox-2,oy-2,CELLW+4,CELLH+4); g.restore();
 
-    // garis luar putih + bayang lembut
     g.shadowColor='rgba(0,0,0,.35)'; g.shadowBlur=8; g.shadowOffsetY=2;
     g.lineWidth=Math.max(2,Math.min(CELLW,CELLH)*0.06); g.strokeStyle='rgba(255,255,255,.98)';
     pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
     g.shadowColor='transparent'; g.lineWidth=1; g.strokeStyle='rgba(0,0,0,.22)';
     pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
 
-    pieces.push({r,c,x:slot.x,y:slot.y,w:CELLW,h:CELLH,ox,oy,bmp,placed:false});
+    const target={x:slot.x, y:slot.y};
+    pieces.push({r,c,x:slot.x,y:slot.y,w:CELLW,h:CELLH,ox,oy,bmp,placed:false,target});
   }
-
   shuffle(true);
 }
 
-/* ===== susun rawak dalam grid ===== */
+/* ===== susun rawak ===== */
 function shuffle(first=false){
-  if(!pieces.length) return;
+  if(!piecesBuilt) return;
   const idx=[...Array(slots.length).keys()];
   for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
   pieces.forEach((p,i)=>{ const s=slots[idx[i]]; p.x=s.x; p.y=s.y; p.placed=false; });
@@ -256,7 +290,6 @@ function shuffle(first=false){
 /* ===== draw ===== */
 function draw(){
   ctx.clearRect(0,0,W,H);
-  // grid rujukan
   ctx.save(); ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,255,255,.12)";
   for(const s of slots) ctx.strokeRect(s.x,s.y,s.w,s.h); ctx.restore();
   for(const p of pieces){ if(p!==dragging) ctx.drawImage(p.bmp, p.x-p.ox, p.y-p.oy); }
@@ -289,23 +322,30 @@ board.addEventListener("pointermove",e=>{
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   dragging.x=x-offX; dragging.y=y-offY; requestAnimationFrame(draw);
 },{passive:false});
+function snapTo(p){
+  const tol=Math.min(p.w,p.h)*0.55;
+  const d=Math.hypot(p.x-p.target.x, p.y-p.target.y);
+  if(d<tol){ p.x=Math.round(p.target.x); p.y=Math.round(p.target.y); p.placed=true; return; }
+  const near=slots.reduce((best,s)=>{const dd=Math.hypot(p.x-s.x,p.y-s.y);return !best||dd<best.d?{s,d:dd}:best;},null);
+  if(near && near.d<tol){ p.x=Math.round(near.s.x); p.y=Math.round(near.s.y); p.placed=(p.x===p.target.x && p.y===p.target.y); }
+}
 board.addEventListener("pointerup",e=>{
   if(!dragging) return; e.preventDefault();
-  const p=dragging; dragging=null;
-
-  // snap ke slot terdekat & bundarkan ke pixel
-  const nearest=slots.reduce((best,s)=>{
-    const d=Math.hypot(p.x-s.x,p.y-s.y); return !best||d<best.d?{s,d}:{s:best.s,d:best.d};
-  },null);
-  const tol=Math.min(p.w,p.h)*0.55;
-  if(nearest && nearest.d<tol){ p.x=Math.round(nearest.s.x); p.y=Math.round(nearest.s.y); }
-  draw(); checkWin();
+  const p=dragging; dragging=null; snapTo(p); draw(); checkWin();
 },{passive:false});
 
 /* ===== menang ===== */
 function checkWin(){
-  const ok=pieces.every((p,i)=> p.x===slots[i].x && p.y===slots[i].y);
-  if(ok){ $("#win").style.display="flex"; if(mp3){ audio.currentTime=0; audio.play().catch(()=>{}); } else if(window.ding){ window.ding(); } }
+  const ok=pieces.length && pieces.every(p=> Math.abs(p.x-p.target.x)<0.5 && Math.abs(p.y-p.target.y)<0.5 );
+  if(ok){
+    $("#win").style.display="flex";
+    // fade-out lagu latar (kalau mahu kekal main, komen blok ini)
+    if(isPlayingBG){
+      const id=setInterval(()=>{ audio.volume=Math.max(0, audio.volume-0.08);
+        if(audio.volume<=0){ clearInterval(id); audio.pause(); isPlayingBG=false; } },60);
+    }
+    if(window.ding) window.ding();
+  }
 }
 $("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(true); };
 
