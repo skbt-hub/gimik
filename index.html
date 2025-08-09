@@ -170,7 +170,7 @@ $("#shuffleBtn").onclick=()=>{ if(isPlayingBG){ const id=setInterval(()=>{ audio
 /* ===== bentuk jigsaw klasik bulat ===== */
 const TAB_R=0.22;           // jejari knob relatif
 const BOW=0.06;             // lengkung tepi
-const KAPPA=0.5522847498307936; // pekali bezier ~ bulatan
+const KAPPA=0.5522847498307936; // bezier ~ bulatan
 
 function pathJigsaw(ctx, x, y, w, h, edges){
   const r = Math.min(w,h);
@@ -254,7 +254,7 @@ function buildPuzzle(){
 
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    const PAD=0.24; // ruang lebih supaya knob bulat tak terpotong
+    const PAD=0.24; // ruang lebih utk knob bulat
     const cw=Math.ceil(CELLW*(1+PAD*2)), ch=Math.ceil(CELLH*(1+PAD*2));
     const bmp=document.createElement('canvas'); bmp.width=cw; bmp.height=ch;
     const g=bmp.getContext('2d'); g.imageSmoothingQuality='high'; g.lineJoin='round'; g.lineCap='round';
@@ -265,7 +265,7 @@ function buildPuzzle(){
     const sx=c*sW, sy=r*sH; g.drawImage(img, sx, sy, sW, sH, ox, oy, CELLW, CELLH);
     g.restore();
 
-    // bevel + stroke nipis untuk gaya klasik
+    // bevel + stroke nipis
     g.save(); g.clip(); g.globalCompositeOperation='multiply';
     const grad=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
     grad.addColorStop(0,'rgba(255,255,255,.14)'); grad.addColorStop(1,'rgba(0,0,0,.14)');
@@ -307,7 +307,7 @@ function draw(){
   if(dragging) ctx.drawImage(dragging.bmp, dragging.x-dragging.ox, dragging.y-dragging.oy);
 }
 
-/* ===== drag & snap ===== */
+/* ===== drag & snap-to-grid tepat ===== */
 function pieceAt(px,py){
   for(let i=pieces.length-1;i>=0;i--){
     const p=pieces[i], bx=p.x-p.ox, by=p.y-p.oy, bw=p.bmp.width, bh=p.bmp.height;
@@ -325,16 +325,20 @@ board.addEventListener("pointermove",e=>{
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   dragging.x=x-offX; dragging.y=y-offY; requestAnimationFrame(draw);
 },{passive:false});
-function snapTo(p){
-  const tol=Math.min(p.w,p.h)*0.55;
-  const d=Math.hypot(p.x-p.target.x, p.y-p.target.y);
-  if(d<tol){ p.x=Math.round(p.target.x); p.y=Math.round(p.target.y); p.placed=true; return; }
-  const near=slots.reduce((best,s)=>{const dd=Math.hypot(p.x-s.x,p.y-s.y);return !best||dd<best.d?{s,d:dd}:best;},null);
-  if(near && near.d<tol){ p.x=Math.round(near.s.x); p.y=Math.round(near.s.y); p.placed=(p.x===p.target.x && p.y===p.target.y); }
+
+function snapToGrid(p){
+  let col = Math.round((p.x - OX) / CELLW);
+  let row = Math.round((p.y - OY) / CELLH);
+  col = Math.max(0, Math.min(cols-1, col));
+  row = Math.max(0, Math.min(rows-1, row));
+  p.x = Math.round(OX + col * CELLW);
+  p.y = Math.round(OY + row * CELLH);
+  p.placed = (col === p.c && row === p.r);
 }
+
 board.addEventListener("pointerup",e=>{
   if(!dragging) return; e.preventDefault();
-  const p=dragging; dragging=null; snapTo(p); draw(); checkWin();
+  const p=dragging; dragging=null; snapToGrid(p); draw(); checkWin();
 },{passive:false});
 
 /* ===== menang ===== */
