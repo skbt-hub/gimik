@@ -6,53 +6,39 @@
 <title>Puzzle Maker — Bulan Kebangsaan</title>
 <style>
   :root{
-    --bg:#0a2540; --panel:#103d68; --board:#0e2d52; --accent:#ffd34d;
+    --bg:#0a2540; --panel:#103d68; --accent:#ffd34d;
     --text:#eef6ff; --muted:#b8d3f0; --line:#0b2846;
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;
-    padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);
-    border-bottom:2px solid var(--line)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
   .brand{display:flex;align-items:center;gap:10px}
   .logo{width:28px;height:28px;border-radius:6px;background:conic-gradient(#fff 0 25%,#cc0001 0 50%,#010066 0 75%,#ffcc00 0 100%);box-shadow:0 0 0 2px #07223f inset}
-  .title{font-weight:800;margin:0;font-size:18px;letter-spacing:.2px}
+  .title{font-weight:800;margin:0;font-size:18px}
   .controls{display:flex;flex-wrap:wrap;gap:8px}
   .btn,.select,.file{background:#0f3359;color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
   .btn:hover{background:#134674}
   input[type=file]{border:none;padding:0}
-  main{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:12px}
-  @media (max-width:980px){ main{grid-template-columns:1fr} }
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
-  .panel h2{margin:0 0 8px 0;font-size:14px;color:var(--muted);font-weight:600}
-  .tray{display:flex;flex-wrap:wrap;gap:8px;min-height:120px}
-  .hint{background:#0f3359;border:1px dashed #1a4d82;border-radius:10px;padding:8px 10px;color:var(--muted);font-size:12px}
-  .stage{position:relative;border:2px solid var(--line);border-radius:14px;min-height:60vh;overflow:hidden;touch-action:none;
+  main{padding:12px}
+  .stage{position:relative;border:2px solid var(--line);border-radius:14px;min-height:70vh;overflow:hidden;
+    touch-action:none; /* penting utk iPad */
     background:
       radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), transparent 40%),
       radial-gradient(circle at 70% 60%, rgba(0,0,0,.15), transparent 45%),
       linear-gradient(180deg, #2f3e52, #243445 60%, #223042);
   }
-  /* Native fullscreen */
   .stage:fullscreen,.stage:-webkit-full-screen,.stage:-ms-fullscreen{
     width:100vw!important;height:100vh!important;border:none!important;border-radius:0!important
   }
-  /* Pseudo-fullscreen fallback (iPad/Safari) */
-  body.fs .stage{
-    position:fixed!important; inset:0!important; width:100vw!important; height:100dvh!important;
-    border:none!important; border-radius:0!important; z-index:9999!important;
-  }
+  body.fs .stage{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;border:none!important;border-radius:0!important;z-index:9999!important}
   canvas{position:absolute;inset:0}
-  footer{padding:10px 16px;color:var(--muted);font-size:12px}
   .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:var(--text);
     border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
-  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center}
-  .overlay h3{margin:0;font-size:24px}
-  .overlay p{margin:0}
-  .overlay .btn{background:var(--accent);color:#222;border-color:#caa94a}
   .toggle{background:#0f3359;border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
   .toggle.active{background:var(--accent);color:#222;border-color:#caa94a;font-weight:700}
+  footer{padding:10px 16px;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -80,16 +66,11 @@
 </header>
 
 <main>
-  <section class="panel">
-    <h2>Palet Kepingan</h2>
-    <div id="tray" class="tray"><span class="hint">Seret kepingan ke papan & padankan. Kepingan akan “snap” bila hampir tepat.</span></div>
-  </section>
-
   <section class="stage">
     <canvas id="board"></canvas>
-    <div id="win" class="overlay">
-      <h3>TAHNIAH ANDA BERJAYA!</h3>
-      <p>SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
+    <div id="win" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff">
+      <h3 style="margin:0">TAHNIAH ANDA BERJAYA!</h3>
+      <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
       <button id="againBtn" class="btn">Main Lagi</button>
     </div>
   </section>
@@ -99,36 +80,27 @@
 <footer>Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk membenarkan audio dimainkan automatik apabila puzzle siap.</footer>
 
 <script>
-/* ===== Util ===== */
-const $ = s=>document.querySelector(s);
-const toast = (m)=>{const t=$("#toast"); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2200);};
+/* ===== util ===== */
+const $=s=>document.querySelector(s);
+const toast=m=>{const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2000)};
 
-/* ===== Canvas & stage ===== */
+/* ===== canvas ===== */
 const board=$("#board"), stageEl=board.parentElement, ctx=board.getContext("2d");
 let W,H,scale=1; const DPR=Math.max(1,window.devicePixelRatio||1);
-
 function resizeCanvas(){
   const pad=12;
-  const inNativeFS = !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement);
-  const inPseudoFS = document.body.classList.contains('fs');
-
-  const vw = window.innerWidth;
-  const vh = (window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight);
-
-  const w = (inNativeFS || inPseudoFS) ? vw : stageEl.clientWidth;
-  const h = (inNativeFS || inPseudoFS) ? vh : Math.max(460, stageEl.clientHeight);
-
-  W = w - pad; H = h - pad;
-  board.style.left=pad/2+"px"; board.style.top=pad/2+"px";
-  board.style.width=W+"px"; board.style.height=H+"px";
-  board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);
+  const isFS = !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement || document.body.classList.contains('fs'));
+  const vw=innerWidth, vh=(visualViewport?Math.round(visualViewport.height):innerHeight);
+  const w=isFS?vw:stageEl.clientWidth, h=isFS?vh:Math.max(520,stageEl.clientHeight);
+  W=w-pad; H=h-pad;
+  board.style.left=pad/2+"px"; board.style.top=pad/2+"px"; board.style.width=W+"px"; board.style.height=H+"px";
+  board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
   draw();
 }
 addEventListener("resize",resizeCanvas);
 ["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>document.addEventListener(ev,resizeCanvas));
 
-/* ===== Model ===== */
+/* ===== model ===== */
 let img=null, mp3=null, audio=new Audio();
 let rows=3, cols=4, pieces=[], slots=[], dragging=null, offX=0, offY=0;
 let showPreview=false, strongMagnet=true;
@@ -136,29 +108,19 @@ const mapping={6:[2,3],8:[2,4],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,5]};
 function setGrid(n){[rows,cols]=mapping[n];}
 $("#piecesSel").onchange=e=>setGrid(+e.target.value);
 
-/* Uploads */
+/* uploads */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
-  const r=new FileReader();
-  r.onload=ev=>{ img=new Image(); img.onload=()=>{toast("Gambar dimuat naik."); draw();}; img.src=ev.target.result; };
-  r.readAsDataURL(f);
+  const r=new FileReader(); r.onload=ev=>{ img=new Image(); img.onload=()=>{toast("Gambar dimuat naik."); draw();}; img.src=ev.target.result; }; r.readAsDataURL(f);
 });
-$("#mp3Input").addEventListener("change",e=>{
-  mp3=e.target.files[0]?URL.createObjectURL(e.target.files[0]):null;
-  if(mp3){ audio.src=mp3; toast("MP3 dimuat naik."); }
-});
-$("#audioArmBtn").onclick=async()=>{
-  try{ if(!mp3){toast("Muat naik MP3 dahulu."); return;}
-    audio.src=mp3; await audio.play(); await new Promise(r=>setTimeout(r,120));
-    audio.pause(); audio.currentTime=0; toast("Audio sedia untuk auto-play.");
-  }catch{ toast("Tekan sekali lagi (iPad memerlukan sentuhan)."); }
-};
+$("#mp3Input").addEventListener("change",e=>{ mp3=e.target.files[0]?URL.createObjectURL(e.target.files[0]):null; if(mp3){ audio.src=mp3; toast("MP3 dimuat naik."); }});
+$("#audioArmBtn").onclick=async()=>{ try{ if(!mp3){toast("Muat naik MP3 dahulu."); return;} audio.src=mp3; await audio.play(); await new Promise(r=>setTimeout(r,120)); audio.pause(); audio.currentTime=0; toast("Audio sedia untuk auto-play."); }catch{ toast("Tekan sekali lagi di iPad."); } };
 
-/* Toggles */
+/* toggles */
 $("#previewBtn").onclick=()=>{ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); draw(); };
 $("#magnetBtn").onclick=()=>{ strongMagnet=!strongMagnet; $("#magnetBtn").classList.toggle("active",strongMagnet); };
 
-/* ===== Build puzzle ===== */
+/* ===== build ===== */
 function buildPuzzle(){
   pieces=[]; slots=[];
   if(!img){toast("Sila muat naik gambar terlebih dahulu."); return;}
@@ -168,38 +130,36 @@ function buildPuzzle(){
   scale=tW/img.width; const ox=(W-tW)/2, oy=(H-tH)/2;
   const pw=tW/cols, ph=tH/rows;
 
-  // bentuk tab (random)
-  const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
-  const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
-  for(let r=0;r<rows;r++)for(let c=0;c<cols-1;c++) tabsH[r][c]=Math.random()>.5?1:-1;
-  for(let r=0;r<rows-1;r++)for(let c=0;c<cols;c++) tabsV[r][c]=Math.random()>.5?1:-1;
+  // tab bentuk (simpel & konsisten)
+  const tabsH=Array.from({length:rows},()=>Array(cols-1).fill( (Math.random()>.5?1:-1) ));
+  const tabsV=Array.from({length:rows-1},()=>Array(cols).fill( (Math.random()>.5?1:-1) ));
 
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
     const left  =(c==0)?0: -tabsH[r][c-1];
     const right =(c==cols-1)?0: tabsH[r][c];
-    const top   =(r==0)?0: -tabsV[r-1][c];
-    const bottom=(r==rows-1)?0: tabsV[r][c];
+    const top   =(r==0)?0: -tabsV[r-1]?.[c]||0;
+    const bottom=(r==rows-1)?0: tabsV[r]?.[c]||0;
     const slot={r,c,x:ox+c*pw,y:oy+r*ph,w:pw,h:ph}; slots.push(slot);
 
-    // tabur kepingan rawak
-    const px = Math.random()*(W-pw);
-    const py = Math.random()*(H-ph);
+    // tabur kepingan: di sekeliling kawasan imej supaya tak bertindan di tengah
+    const side = Math.floor(Math.random()*4);
+    let px,py;
+    if(side===0){ px=Math.random()*(W-pw); py=oy - ph*0.9*Math.random(); }
+    else if(side===1){ px=W - (Math.random()*pw + pw); py=Math.random()*(H-ph); }
+    else if(side===2){ px=Math.random()*(W-pw); py=oy + tH + ph*0.2 + Math.random()*ph; }
+    else { px=ox - pw*0.9*Math.random(); py=Math.random()*(H-ph); }
+
     const piece={r,c,x:px,y:py,w:pw,h:ph,placed:false,edges:{top,bottom,left,right}};
     pieces.push(piece);
   }
-  const tray=$("#tray"); tray.innerHTML="";
-  tray.append(Object.assign(document.createElement("span"),{className:"hint",textContent:"Tip: hidupkan 'Preview' untuk rujukan imej; 'Magnet' untuk snap lebih kuat."}));
   draw();
 }
 
-/* ===== Render ===== */
+/* ===== render ===== */
 function drawBackground(){
   ctx.clearRect(0,0,W,H);
   if(showPreview && img){
-    ctx.globalAlpha=.18;
-    const tw=img.width*scale, th=img.height*scale, x=(W-tw)/2, y=(H-th)/2;
-    ctx.drawImage(img,x,y,tw,th);
-    ctx.globalAlpha=1;
+    ctx.globalAlpha=.18; const tw=img.width*scale, th=img.height*scale, x=(W-tw)/2, y=(H-th)/2; ctx.drawImage(img,x,y,tw,th); ctx.globalAlpha=1;
   }
 }
 function jigsawPath(x,y,w,h,e){
@@ -213,93 +173,80 @@ function jigsawPath(x,y,w,h,e){
   if(e.left===0){ctx.lineTo(x,y+k);}else{const d=e.left; ctx.lineTo(x,y+h*.65); ctx.bezierCurveTo(x-d*tab,y+h*.65,x-d*tab,y+h*.35,x,y+h*.35); ctx.lineTo(x,y+k);}
   ctx.quadraticCurveTo(x,y,x+k,y); ctx.closePath();
 }
-
-/* >>>> Kepingan sentiasa ada gambar (slicing ikut grid) <<<< */
 function drawPiece3D(p){
   if(!img) return;
-
-  // 1) Klip bentuk
-  ctx.save();
-  jigsawPath(p.x, p.y, p.w, p.h, p.edges);
-  ctx.clip();
-
-  // 2) Lukis bahagian imej milik kepingan (sumber = grid dalam imej asal)
-  const sW = img.width  / cols;
-  const sH = img.height / rows;
-  const sx = p.c * sW;
-  const sy = p.r * sH;
-  ctx.imageSmoothingQuality = 'high';
+  // 1) klip bentuk
+  ctx.save(); jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.clip();
+  // 2) bahagian imej milik kepingan
+  const sW=img.width/cols, sH=img.height/rows, sx=p.c*sW, sy=p.r*sH;
+  ctx.imageSmoothingQuality='high';
   ctx.drawImage(img, sx, sy, sW, sH, p.x, p.y, p.w, p.h);
-
   ctx.restore();
-
-  // 3) Bingkai & efek 3D
+  // 3) efek 3D
   ctx.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06);
   ctx.strokeStyle="rgba(255,255,255,.95)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
   ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
-
-  const g1=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
-  g1.addColorStop(0,"rgba(255,255,255,.28)"); g1.addColorStop(.5,"rgba(255,255,255,0)");
+  const g1=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h); g1.addColorStop(0,"rgba(255,255,255,.25)"); g1.addColorStop(.5,"rgba(255,255,255,0)");
   ctx.fillStyle=g1; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
-  const g2=ctx.createLinearGradient(p.x,p.y,p.x+p.w,p.y+p.h);
-  g2.addColorStop(.5,"rgba(0,0,0,0)"); g2.addColorStop(1,"rgba(0,0,0,.18)");
+  const g2=ctx.createLinearGradient(p.x,p.y,p.x+p.w,p.y+p.h); g2.addColorStop(.6,"rgba(0,0,0,0)"); g2.addColorStop(1,"rgba(0,0,0,.18)");
   ctx.fillStyle=g2; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
 }
-
 function draw(){
   drawBackground();
   for(const p of pieces){ if(p!==dragging) drawPiece3D(p); }
   if(dragging) drawPiece3D(dragging);
 }
 
-/* ===== Interaksi ===== */
-function pick(px,py){ for(let i=pieces.length-1;i>=0;i--){ const p=pieces[i]; jigsawPath(p.x,p.y,p.w,p.h,p.edges); if(ctx.isPointInPath(px,py)) return p; } return null;}
-function down(e){ const r=board.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; const p=pick(x,y); if(p){dragging=p; offX=x-p.x; offY=y-p.y;} }
-function move(e){ if(!dragging) return; const r=board.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; dragging.x=x-offX; dragging.y=y-offY; draw(); }
-function up(){
+/* ===== drag: Pointer Events (licin di iPad) ===== */
+let rafId=null;
+function pointerDown(e){
+  e.preventDefault();
+  board.setPointerCapture?.(e.pointerId);
+  const rect=board.getBoundingClientRect(), x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const pick=()=>{ for(let i=pieces.length-1;i>=0;i--){const p=pieces[i]; jigsawPath(p.x,p.y,p.w,p.h,p.edges); if(ctx.isPointInPath(x,y)) return p;} return null; };
+  const p=pick(); if(!p) return;
+  dragging=p; offX=x-p.x; offY=y-p.y;
+  // bawa ke atas
+  const idx=pieces.indexOf(p); pieces.push(...pieces.splice(idx,1));
+}
+function pointerMove(e){
   if(!dragging) return;
-  const p=dragging; const s=slots[p.r*cols+p.c];
-  const tol = Math.min(p.w,p.h)*(strongMagnet?0.45:0.28);
-  const near = Math.hypot(p.x-s.x,p.y-s.y) < tol;
-  if(near){ p.x=s.x; p.y=s.y; p.placed=true; }
+  e.preventDefault();
+  const rect=board.getBoundingClientRect(), x=e.clientX-rect.left, y=e.clientY-rect.top;
+  dragging.x=x-offX; dragging.y=y-offY;
+  if(!rafId){ rafId=requestAnimationFrame(()=>{ rafId=null; draw(); }); }
+}
+function pointerUp(e){
+  if(!dragging) return;
+  e.preventDefault();
+  const p=dragging, s=slots[p.r*cols+p.c];
+  const tol=Math.min(p.w,p.h)*(strongMagnet?0.5:0.32);
+  if(Math.hypot(p.x-s.x,p.y-s.y)<tol){ p.x=s.x; p.y=s.y; p.placed=true; }
   dragging=null; draw(); checkWin();
 }
-board.addEventListener("mousedown",down); addEventListener("mousemove",move); addEventListener("mouseup",up);
-board.addEventListener("touchstart",down,{passive:true}); board.addEventListener("touchmove",move,{passive:true}); board.addEventListener("touchend",up);
+board.addEventListener("pointerdown",pointerDown,{passive:false});
+board.addEventListener("pointermove",pointerMove,{passive:false});
+board.addEventListener("pointerup",pointerUp,{passive:false});
+board.addEventListener("pointercancel",pointerUp,{passive:false});
 
-/* ===== Win ===== */
-function checkWin(){
-  if(pieces.length && pieces.every(p=>p.placed)){
-    $("#win").style.display="flex";
-    if(mp3){ audio.currentTime=0; audio.play().catch(()=>{}); }
-  }
-}
+/* ===== win / shuffle / start ===== */
+function checkWin(){ if(pieces.length && pieces.every(p=>p.placed)){ $("#win").style.display="flex"; if(mp3){ audio.currentTime=0; audio.play().catch(()=>{});} } }
 $("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(); };
-
-/* ===== Shuffle ===== */
 function shuffle(){ for(const p of pieces){ p.placed=false; p.x=Math.random()*(W-p.w); p.y=Math.random()*(H-p.h);} draw(); }
 $("#shuffleBtn").onclick=shuffle;
+$("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} setGrid(+$("#piecesSel").value); buildPuzzle(); toast(`Puzzle ${rows*cols} keping siap.`); };
 
-/* ===== Start ===== */
-$("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} setGrid(+$("#piecesSel").value); buildPuzzle(); toast(`Puzzle ${rows*cols} keping disediakan.`); };
-
-/* ===== Fullscreen (native + fallback) ===== */
+/* ===== fullscreen (native + fallback) ===== */
 function fsSupported(){ return !!(document.fullscreenEnabled||document.webkitFullscreenEnabled||document.msFullscreenEnabled); }
 function isFS(){ return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement); }
 function enterFS(el){ (el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen)?.call(el); }
 function exitFS(){ (document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen)?.call(document); }
 function usePseudoFS(on){ document.body.classList.toggle('fs',!!on); resizeCanvas(); }
+$("#fullBtn").onclick=()=>{ if(fsSupported()){ if(!isFS()) enterFS(stageEl); else exitFS(); } else { usePseudoFS(!document.body.classList.contains('fs')); } };
+["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{ if(!isFS()) document.body.classList.remove('fs'); resizeCanvas(); }));
 
-$("#fullBtn").onclick=()=>{ 
-  if (fsSupported()) { if(!isFS()) enterFS(stageEl); else exitFS(); }
-  else { usePseudoFS(!document.body.classList.contains('fs')); }
-};
-["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>{
-  document.addEventListener(ev, ()=>{ if(!isFS()) document.body.classList.remove('fs'); resizeCanvas(); });
-});
-
-function init(){ resizeCanvas(); }
-init();
+/* init */
+resizeCanvas();
 </script>
 </body>
 </html>
