@@ -3,85 +3,71 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Puzzle Maker — Klasik (Flow Library ➜ Size ➜ Game)</title>
+<title>Puzzle Kebangsaan — Segi Empat + Lekuk Bulat</title>
 <style>
-  :root{--bg:#0a2540;--panel:#0f3359;--accent:#ffd34d;--text:#eef6ff;--muted:#b8d3f0;--line:#0b2846}
-  *{box-sizing:border-box} html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
-  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
-  .brand{display:flex;align-items:center;gap:10px}.logo{width:28px;height:28px;border-radius:6px;background:conic-gradient(#fff 0 25%,#cc0001 0 50%,#010066 0 75%,#ffcc00 0 100%);box-shadow:0 0 0 2px #07223f inset}
-  .title{margin:0;font-size:18px;font-weight:800}
+  :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Inter,Segoe UI,Roboto,Arial,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
+  .brand{font-weight:800}
   .controls{display:flex;flex-wrap:wrap;gap:8px}
-  .btn,.select,.file{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
-  .btn:hover{background:#134674} input[type=file]{border:none;padding:0}
+  .btn,.select,.file{background:var(--panel);color:var(--text);border:1px solid #1a4d82;
+    border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+  .btn:hover{background:#134674}
+  input[type=file]{border:none;padding:0}
   main{padding:12px}
   .stage{position:relative;border:2px solid var(--line);border-radius:14px;min-height:70vh;overflow:hidden;touch-action:none;
-    background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.08),transparent 40%),radial-gradient(circle at 70% 60%,rgba(0,0,0,.15),transparent 45%),linear-gradient(180deg,#2f3e52,#243445 60%,#223042)}
-  .stage:fullscreen,.stage:-webkit-full-screen{width:100vw!important;height:100vh!important;border:none!important;border-radius:0!important}
-  body.fs .stage{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;border:none!important;border-radius:0!important;z-index:9999}
+    background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.08),transparent 40%),
+               radial-gradient(circle at 70% 60%,rgba(0,0,0,.15),transparent 45%),
+               linear-gradient(180deg,#2f3e52,#243445 60%,#223042)}
+  .stage:fullscreen,.stage:-webkit-full-screen{width:100vw!important;height:100vh!important;border:none!important;border-radius:0}
   canvas{position:absolute;inset:0}
   .toggle{background:var(--panel);border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
-  .toggle.active{background:var(--accent);color:#222;border-color:#caa94a;font-weight:700}
-
-  /* Library (gambar penuh + Main) */
-  .library{position:relative;display:flex;align-items:center;justify-content:center;min-height:68vh;border:2px dashed #244a76;border-radius:12px;background:#0b2745}
-  .libWrap{max-width:100%;max-height:100%;display:flex;flex-direction:column;gap:14px;align-items:center}
-  .libImg{max-width:min(100%,1000px);max-height:58vh;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-  .bigBtn{background:#22c55e;border:0;color:#07223f;font-weight:800;border-radius:999px;padding:10px 18px;cursor:pointer}
-  .bigBtn:disabled{opacity:.5;cursor:not-allowed}
-
-  /* Size picker */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20}
-  .modalCard{background:#0f2f54;border:1px solid #1b4b80;border-radius:14px;padding:14px 16px;min-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
-  .modalTitle{margin:0 0 10px 0;font-weight:800}
-  .sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  .sizeBtn{background:#ffd34d;color:#222;border:0;border-radius:10px;padding:10px 0;font-weight:800;cursor:pointer}
-  .sizeBtn:hover{filter:brightness(0.95)}
-
-  /* Preview rujukan kecil */
-  #miniPrev{position:absolute;right:12px;bottom:12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.6);background:#0b1e32;padding:6px;display:none}
+  .toggle.active{background:var(--accent);color:#222;border-color:#c9a43c;font-weight:700}
+  #miniPrev{position:absolute;right:12px;bottom:12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);
+    border:2px solid rgba(255,255,255,.6);background:#0b1e32;padding:6px;display:none}
   #miniPrev canvas{display:block;width:100%;height:auto}
   .range{appearance:none;width:120px;height:6px;border-radius:999px;background:#244a76;outline:none}
   .range::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:#ffd34d;border:2px solid #bfa13b}
-
-  .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:30}
-  footer{padding:10px 16px;color:var(--muted);font-size:12px}
-
-  /* Win overlay */
+  .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
   #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
+  footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand"><div class="logo"></div><h1 class="title">Selamat Menyambut Bulan Kebangsaan ke-68</h1></div>
+  <div class="brand">Selamat Menyambut Bulan Kebangsaan ke-68</div>
   <div class="controls">
     <label class="file">Gambar <input id="imgInput" type="file" accept="image/*"></label>
     <label class="file">MP3 <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3"></label>
-    <button id="audioArmBtn" class="btn">Bunyi: SEDIAKAN</button>
+    <select id="piecesSel" class="select" title="Bilangan kepingan">
+      <option value="6">6 (2×3)</option><option value="8" selected>8 (2×4)</option>
+      <option value="12">12 (3×4)</option><option value="16">16 (4×4)</option>
+      <option value="18">18 (3×6)</option><option value="20">20 (4×5)</option>
+    </select>
+    <button id="startBtn" class="btn">Mula Puzzle</button>
+    <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
+    <button id="audioArmBtn" class="btn">Bunyi: SEDIAKAN</button>
     <button id="fullBtn" class="btn">Skrin Penuh</button>
   </div>
 </header>
 
 <main>
-  <!-- Library view -->
-  <section id="library" class="library">
-    <div class="libWrap">
-      <img id="libImg" class="libImg" alt="Pratonton" />
-      <button id="playBtn" class="bigBtn" disabled>▶️ Main</button>
-      <div style="color:#b8d3f0;font-size:12px">Muat naik gambar → tekan <b>Main</b>.</div>
-    </div>
-  </section>
-
-  <!-- Game stage -->
-  <section id="game" class="stage" style="display:none">
+  <section class="stage">
     <canvas id="board"></canvas>
+
+    <!-- preview kecil -->
     <div id="miniPrev">
       <canvas id="miniCanvas"></canvas>
       <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-        <input id="prevSize" type="range" class="range" min="160" max="320" value="240">
+        <input id="prevSize" type="range" class="range" min="160" max="320" value="220">
         <span style="font-size:12px;color:#cfe6ff">Rujukan</span>
       </div>
     </div>
+
     <div id="win">
       <h3 style="margin:0">TAHNIAH ANDA BERJAYA!</h3>
       <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
@@ -90,59 +76,35 @@
   </section>
 </main>
 
-<!-- Size picker modal -->
-<div id="sizeModal" class="modal">
-  <div class="modalCard">
-    <h3 class="modalTitle">Pilih Saiz Puzzle</h3>
-    <div class="sizes" id="sizeGrid"></div>
-  </div>
-</div>
-
 <div id="toast" class="toast"></div>
-<footer>Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk membenarkan audio dimainkan automatik apabila puzzle siap.</footer>
+<footer>Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk membenarkan audio autoplay apabila puzzle siap.</footer>
 
 <script>
-/* ===== util ===== */
+/* ===== Util ===== */
 const $=s=>document.querySelector(s);
-const toast=m=>{const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1800)};
+const toast=m=>{const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1600)};
 
-/* ===== state ===== */
-let mode='library'; // 'library' atau 'game'
-function show(id){ $("#library").style.display = id==='library'?'flex':'none'; $("#game").style.display = id==='game'?'block':'none'; mode=id; }
-
-/* ===== canvas ===== */
+/* ===== Canvas ===== */
 const board=$("#board"), stageEl=board.parentElement, ctx=board.getContext("2d");
-let W,H,scale=1; const DPR=Math.max(1,window.devicePixelRatio||1);
+let W,H; const DPR=Math.max(1,window.devicePixelRatio||1);
 function resizeCanvas(){
-  if(mode!=='game') return;
-  const pad=12, fs=!!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement||document.body.classList.contains('fs'));
-  const vw=innerWidth, vh=(visualViewport?Math.round(visualViewport.height):innerHeight);
-  const w=fs?vw:stageEl.clientWidth, h=fs?vh:Math.max(520,stageEl.clientHeight);
+  const pad=12;
+  const w=stageEl.clientWidth, h=Math.max(520,stageEl.clientHeight);
   W=w-pad; H=h-pad; board.style.left=pad/2+"px"; board.style.top=pad/2+"px"; board.style.width=W+"px"; board.style.height=H+"px";
   board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); draw();
 }
 addEventListener("resize",resizeCanvas);
-["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>document.addEventListener(ev,resizeCanvas));
 
-/* ===== model ===== */
-let img=null, mp3=null, audio=new Audio(), audioCtx=null, ding=null;
-let rows=3, cols=4, pieces=[], slots=[];
-let dragging=null, offX=0, offY=0, showPreview=false, strongMagnet=true;
-let OX=0, OY=0, CELLW=0, CELLH=0;
+/* ===== State ===== */
+let img=null, audio=new Audio(), mp3=null, audioCtx=null, ding=null;
+let rows=2, cols=4, pieces=[], slots=[];
+let OX=0, OY=0, CELLW=0, CELLH=0, dragging=null, offX=0, offY=0, showPreview=false;
 
-/* ===== uploads & audio ===== */
+/* ===== Uploads ===== */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{
-    img=new Image();
-    img.onload=()=>{
-      $("#libImg").src = ev.target.result;
-      $("#playBtn").disabled=false;
-      toast("Gambar dimuat naik.");
-    };
-    img.src=ev.target.result;
-  };
+  r.onload=ev=>{ img=new Image(); img.onload=()=>{toast("Gambar dimuat naik."); draw();}; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
 $("#mp3Input").addEventListener("change",e=>{ mp3=e.target.files[0]?URL.createObjectURL(e.target.files[0]):null; if(mp3){audio.src=mp3; toast("MP3 dimuat naik.");}});
@@ -153,7 +115,7 @@ $("#audioArmBtn").onclick=async()=>{
     g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.2,audioCtx.currentTime+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.25);
     o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.26);
-    window.ding=()=>{ const o2=audioCtx.createOscillator(), g2=audioCtx.createGain(); o2.type='triangle'; o2.frequency.value=990;
+    ding=()=>{ const o2=audioCtx.createOscillator(), g2=audioCtx.createGain(); o2.type='triangle'; o2.frequency.value=990;
       g2.gain.setValueAtTime(0.0001,audioCtx.currentTime); g2.gain.linearRampToValueAtTime(0.25,audioCtx.currentTime+0.02);
       g2.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.30);
       o2.connect(g2).connect(audioCtx.destination); o2.start(); o2.stop(audioCtx.currentTime+0.32); };
@@ -162,110 +124,86 @@ $("#audioArmBtn").onclick=async()=>{
   }catch{ toast("Sentuh sekali lagi (iPad)."); }
 };
 
-/* ===== library -> size picker ===== */
-const SIZES=[8,16,24,36,64,120,144,208,252];
-$("#playBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} openSizePicker(); };
-function openSizePicker(){
-  const grid=$("#sizeGrid"); grid.innerHTML="";
-  for(const n of SIZES){
-    const b=document.createElement('button');
-    b.className='sizeBtn'; b.textContent=n;
-    b.onclick=()=>{ pickSize(n); closeSizePicker(); };
-    grid.appendChild(b);
+/* ===== Controls ===== */
+const mapping={6:[2,3],8:[2,4],12:[3,4],16:[4,4],18:[3,6],20:[4,5]};
+$("#piecesSel").onchange=e=>{ const n=+e.target.value; [rows,cols]=mapping[n]; };
+
+$("#previewBtn").onclick=()=>{ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); if(img) renderMini(); };
+
+$("#prevSize").oninput=()=>renderMini();
+
+$("#fullBtn").onclick=()=>{
+  const el=stageEl; const req=el.requestFullscreen||el.webkitRequestFullscreen; const exit=document.exitFullscreen||document.webkitExitFullscreen;
+  if(!document.fullscreenElement&&!document.webkitFullscreenElement) req?.call(el); else exit?.call(document);
+};
+
+$("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} buildPuzzle(); };
+$("#shuffleBtn").onclick=shuffle;
+
+/* ===== Bentuk kepingan: segi empat + lekuk/tanduk bulat di tengah ===== */
+/* Ini yang buat rupa macam gambar cikgu: slot bulat tepat di tengah sisi */
+const TAB_R = 0.18; // jejari relatif (0..0.5). Nak lebih kecil/kemas? cuba 0.16
+function pathRectMidCircle(x,y,w,h,edges){ // edges: 1=tanduk, -1=lekuk, 0=flat
+  const p=new Path2D(), r=Math.min(w,h)*TAB_R;
+  const cxT=x+w/2, cyT=y;              // top center (pinggir)
+  const cxR=x+w,   cyR=y+h/2;          // right
+  const cxB=x+w/2, cyB=y+h;            // bottom
+  const cxL=x,     cyL=y+h/2;          // left
+  p.moveTo(x,y);
+  // top edge
+  if(edges.top===0){ p.lineTo(x+w,y); }
+  else{
+    const dir=edges.top; const cY=cyT - dir*r;
+    p.lineTo(cxT-r*1.2,y);
+    p.arc(cxT, cY, r, Math.PI, 0, dir>0);  // bulatan keluar/masuk
+    p.lineTo(x+w,y);
   }
-  $("#sizeModal").style.display='flex';
-}
-function closeSizePicker(){ $("#sizeModal").style.display='none'; }
-
-/* cari faktor r×c = n paling dekat nisbah imej (c/r ≈ aspect) */
-function gridFor(n){
-  const a=img.width/img.height;
-  let best=[1,n], bestErr=1e9;
-  for(let r=1;r<=n;r++){
-    if(n%r!==0) continue;
-    const c=n/r, err=Math.abs((c/r)-a);
-    if(err<bestErr){best=[r,c];bestErr=err;}
+  // right edge
+  if(edges.right===0){ p.lineTo(x+w,y+h); }
+  else{
+    const dir=edges.right; const cX=cxR + dir*r;
+    p.lineTo(x+w, cyR-r*1.2);
+    p.arc(cX, cyR, r, -Math.PI/2, Math.PI/2, dir>0);
+    p.lineTo(x+w,y+h);
   }
-  return best;
+  // bottom edge
+  if(edges.bottom===0){ p.lineTo(x,y+h); }
+  else{
+    const dir=edges.bottom; const cY=cyB + dir*r;
+    p.lineTo(cxB+r*1.2,y+h);
+    p.arc(cxB, cY, r, 0, Math.PI, dir<0);
+    p.lineTo(x,y+h);
+  }
+  // left edge
+  if(edges.left===0){ p.closePath(); }
+  else{
+    const dir=edges.left; const cX=cxL - dir*r;
+    p.lineTo(x, cyL+r*1.2);
+    p.arc(cX, cyL, r, Math.PI/2, -Math.PI/2, dir>0);
+    p.closePath();
+  }
+  return p;
 }
 
-/* ===== bentuk jigsaw klasik stabil ===== */
-const SHAPE={R:0.18, NECK:0.40, K:0.08};
-function arcUnit(g,cx,cy,r,sa,ea,ccw){ g.arc(cx,cy,r,Math.PI*sa,Math.PI*ea,ccw); }
-function unitPath(g,edges){
-  const r=SHAPE.R, neck=SHAPE.NECK*r, k=SHAPE.K;
-  g.beginPath(); g.moveTo(k,0);
-  // top
-  if(edges.top===0){ g.lineTo(1-k,0); }
-  else{ const d=edges.top, cx=.5, cy=0-d*r;
-    g.lineTo(.30,0); g.bezierCurveTo(.38,0,.5-neck,0,.5-neck,-d*neck*.18);
-    arcUnit(g,cx,cy,r,1+.16*d,0-.16*d,d>0);
-    g.bezierCurveTo(.5+neck,0,.62,0,.70,0); g.lineTo(1-k,0);
-  } g.quadraticCurveTo(1,0,1,k);
-  // right
-  if(edges.right===0){ g.lineTo(1,1-k); }
-  else{ const d=edges.right, cx=1+d*r, cy=.5;
-    g.lineTo(1,.30); g.bezierCurveTo(1,.38,1,cy-neck,1-d*neck*.18,cy-neck);
-    arcUnit(g,cx,cy,r,1.5+.16*d,.5-.16*d,d>0);
-    g.bezierCurveTo(1,cy+neck,1,.62,1,.70); g.lineTo(1,1-k);
-  } g.quadraticCurveTo(1,1,1-k,1);
-  // bottom
-  if(edges.bottom===0){ g.lineTo(k,1); }
-  else{ const d=edges.bottom, cx=.5, cy=1+d*r;
-    g.lineTo(.70,1); g.bezierCurveTo(.62,1,.5+neck,1,.5+neck,1+d*neck*.18);
-    arcUnit(g,cx,cy,r,0+.16*d,1-.16*d,d<0);
-    g.bezierCurveTo(.5-neck,1,.38,1,.30,1); g.lineTo(k,1);
-  } g.quadraticCurveTo(0,1,0,1-k);
-  // left
-  if(edges.left===0){ g.lineTo(0,k); }
-  else{ const d=edges.left, cx=0-d*r, cy=.5;
-    g.lineTo(0,.70); g.bezierCurveTo(0,.62,0,cy+neck,0-d*neck*.18,cy+neck);
-    arcUnit(g,cx,cy,r,.5+.16*d,1.5-.16*d,d<0);
-    g.bezierCurveTo(0,cy-neck,0,.38,0,.30); g.lineTo(0,k);
-  } g.quadraticCurveTo(0,0,k,0); g.closePath();
-}
-function pathScaled(x,y,w,h,edges){
-  const p=new Path2D();
-  const g={moveTo:(ax,ay)=>p.moveTo(x+ax*w,y+ay*h),lineTo:(ax,ay)=>p.lineTo(x+ax*w,y+ay*h),
-    bezierCurveTo:(a1x,a1y,a2x,a2y,ax,ay)=>p.bezierCurveTo(x+a1x*w,y+a1y*h,x+a2x*w,y+a2y*h,x+ax*w,y+ay*h),
-    quadraticCurveTo:(ax,ay,bx,by)=>p.quadraticCurveTo(x+ax*w,y+ay*h,x+bx*w,y+by*h),
-    arc:(acx,acy,ar,as,ae,ccw)=>p.arc(x+acx*w,y+acy*h,ar*Math.max(w,h),as,ae,ccw),beginPath:()=>{},closePath:()=>p.closePath()};
-  unitPath(g,edges); return p;
-}
-
-/* render kepingan → bitmap */
-function makeBitmapPiece(p,sW,sH){
-  const PAD=0.25;
-  const cw=Math.ceil(p.w*(1+PAD*2)), ch=Math.ceil(p.h*(1+PAD*2));
-  const bmp=document.createElement('canvas'); bmp.width=cw; bmp.height=ch;
-  const g=bmp.getContext('2d'); const ox=p.w*PAD, oy=p.h*PAD;
-  const path=pathScaled(ox,oy,p.w,p.h,p.edges);
-  g.save(); g.clip(path);
-  const sx=p.c*sW, sy=p.r*sH; g.imageSmoothingQuality='high'; g.drawImage(img,sx,sy,sW,sH,ox,oy,p.w,p.h);
-  g.restore();
-  g.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06); g.strokeStyle="rgba(255,255,255,.97)"; g.stroke(path);
-  g.lineWidth=1; g.strokeStyle="rgba(0,0,0,.28)"; g.stroke(path);
-  return {bmp,ox,oy};
-}
-
-/* ===== build puzzle ===== */
-function buildPuzzle(nPieces){
+/* ===== Build puzzle (susun dalam grid, gambar align tepat) ===== */
+let scale=1;
+function buildPuzzle(){
   pieces=[]; slots=[];
-  const [r,c]=gridFor(nPieces); rows=r; cols=c;
-
   const margin=20, boxW=W-margin*2, boxH=H-margin*2;
   const rImg=img.width/img.height, rBox=boxW/boxH;
   let tW,tH; if(rImg>rBox){tW=boxW; tH=boxW/rImg;} else {tH=boxH; tW=boxH*rImg;}
   scale=tW/img.width; OX=(W-tW)/2; OY=(H-tH)/2; CELLW=tW/cols; CELLH=tH/rows;
 
+  // arah tanduk/lekuk simetri
   const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
   const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
-  for(let r=0;r<rows;r++) for(let c=0;c<cols-1;c++) tabsH[r][c]=(Math.random()>.5?1:-1);
-  for(let r=0;r<rows-1;r++) for(let c=0;c<cols;c++) tabsV[r][c]=(Math.random()>.5?1:-1);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols-1;c++) tabsH[r][c]=(Math.random()>.5?1:-1);
+  for(let r=0;r<rows-1;r++)for(let c=0;c<cols;c++) tabsV[r][c]=(Math.random()>.5?1:-1);
 
   const sW=img.width/cols, sH=img.height/rows;
 
-  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+  // buat slot & keping
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
     const left  =(c===0)?0: -tabsH[r][c-1];
     const right =(c===cols-1)?0: tabsH[r][c];
     const top   =(r===0)?0: -tabsV[r-1]?.[c]||0;
@@ -273,110 +211,101 @@ function buildPuzzle(nPieces){
 
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    // sebar berselerak DI LUAR bingkai (ala gambar 4)
-    let px,py;
-    const side=Math.floor(Math.random()*4);
-    if(side===0){ px = OX - CELLW*(0.8+Math.random()*0.6); py = OY + Math.random()*(CELLH*rows - CELLH); }
-    else if(side===1){ px = OX + tW + CELLW*(0.2+Math.random()*0.8); py = OY + Math.random()*(CELLH*rows - CELLH); }
-    else if(side===2){ px = OX + Math.random()*(tW - CELLW); py = OY + tH + CELLH*(0.3+Math.random()*0.8); }
-    else { px = OX + Math.random()*(tW - CELLW); py = OY - CELLH*(0.8+Math.random()*0.6); }
+    const p={r,c,x:slot.x,y:slot.y,w:CELLW,h:CELLH,placed:false,edges:{top,bottom,left,right}};
+    // lukis ke bitmap (off-screen) – clip bentuk, isi imej, bingkai cantik
+    const PAD=0.16; const cw=Math.ceil(p.w*(1+PAD*2)), ch=Math.ceil(p.h*(1+PAD*2));
+    const bmp=document.createElement('canvas'); bmp.width=cw; bmp.height=ch;
+    const g=bmp.getContext('2d'); const ox=p.w*PAD, oy=p.h*PAD;
 
-    const p={r,c,x:px,y:py,w:CELLW,h:CELLH,placed:false,edges:{top,bottom,left,right}};
-    Object.assign(p, makeBitmapPiece(p,sW,sH)); pieces.push(p);
+    const path=pathRectMidCircle(ox,oy,p.w,p.h,p.edges);
+    g.save(); g.clip(path);
+    const sx=c*sW, sy=r*sH;
+    g.imageSmoothingQuality='high'; g.drawImage(img, sx, sy, sW, sH, ox, oy, p.w, p.h);
+    g.restore();
+
+    // bingkai + sedikit shadow untuk “pop”
+    g.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06);
+    g.strokeStyle="rgba(255,255,255,.98)"; g.stroke(path);
+    g.shadowColor="rgba(0,0,0,.35)"; g.shadowBlur=8; g.shadowOffsetY=2;
+    g.strokeStyle="rgba(0,0,0,.20)"; g.lineWidth=1; g.stroke(path);
+
+    p.bmp=bmp; p.ox=ox; p.oy=oy;
+    pieces.push(p);
   }
+
+  // Kacau: tukar lokasi slot secara rawak (masih dalam grid seperti gambar cikgu)
+  shuffle(true);
+}
+
+/* ===== Shuffle ===== */
+function shuffle(first=false){
+  if(!pieces.length) return;
+  const idx=[...Array(slots.length).keys()];
+  for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+  pieces.forEach((p,i)=>{ const s=slots[idx[i]]; p.x=s.x; p.y=s.y; p.placed = (first?false:false); });
   draw();
 }
 
-/* ===== draw ===== */
+/* ===== Draw ===== */
 function draw(){
-  if(mode!=='game') return;
   ctx.clearRect(0,0,W,H);
-  // bingkai/grid
-  ctx.save(); ctx.lineWidth=2; ctx.strokeStyle="rgba(255,255,255,.18)"; ctx.setLineDash([4,6]);
+  // garis grid halus
+  ctx.save(); ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,255,255,.12)";
   for(const s of slots) ctx.strokeRect(s.x,s.y,s.w,s.h); ctx.restore();
   for(const p of pieces){ if(p!==dragging) ctx.drawImage(p.bmp, p.x-p.ox, p.y-p.oy); }
   if(dragging) ctx.drawImage(dragging.bmp, dragging.x-dragging.ox, dragging.y-dragging.oy);
 }
 
-/* ===== preview kecil ===== */
+/* ===== Preview ===== */
 function renderMini(){
   const box=$("#miniPrev"), c=$("#miniCanvas"), g=c.getContext('2d');
+  if(!img){ box.style.display="none"; return; }
   const w=parseInt($("#prevSize").value,10); const r=img.width/img.height;
   c.width=w; c.height=Math.round(w/r); g.clearRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height);
   box.style.width=w+"px"; box.style.display=showPreview?"block":"none";
 }
-$("#previewBtn").onclick=()=>{ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); if(mode==='game'){renderMini();} };
-$("#prevSize").oninput=()=>{ if(mode==='game') renderMini(); };
 
-/* ===== drag & snap ===== */
-let rafId=null;
+/* ===== Drag & Snap ===== */
 function pieceAt(px,py){
   for(let i=pieces.length-1;i>=0;i--){
     const p=pieces[i], bx=p.x-p.ox, by=p.y-p.oy, bw=p.bmp.width, bh=p.bmp.height;
     if(px>=bx && px<=bx+bw && py>=by && py<=by+bh) return p;
   } return null;
 }
-function pointerDown(e){
+board.addEventListener("pointerdown",e=>{
   e.preventDefault(); board.setPointerCapture?.(e.pointerId);
-  const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+  const r=board.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
   const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.x; offY=y-p.y;
-  const i=pieces.indexOf(p); pieces.push(...pieces.splice(i,1));
-  if(!rafId){rafId=requestAnimationFrame(()=>{rafId=null;draw();});}
-}
-function pointerMove(e){ if(!dragging) return; e.preventDefault();
-  const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  dragging.x=x-offX; dragging.y=y-offY; if(!rafId){rafId=requestAnimationFrame(()=>{rafId=null;draw();});}
-}
-function snapToNearest(p){
-  const tol=Math.min(p.w,p.h)*0.55; // magnet kuat (ala “Magnet” ON)
-  const s=slots[p.r*cols+p.c];
-  if(Math.hypot(p.x-s.x,p.y-s.y)<tol){ p.x=s.x; p.y=s.y; p.placed=true; return; }
-  let gc=Math.round((p.x-OX)/CELLW), gr=Math.round((p.y-OY)/CELLH);
-  gc=Math.max(0,Math.min(cols-1,gc)); gr=Math.max(0,Math.min(rows-1,gr));
-  const gs=slots[gr*cols+gc];
-  if(Math.hypot(p.x-gs.x,p.y-gs.y)<tol){ p.x=gs.x; p.y=gs.y; p.placed=(gr===p.r && gc===p.c); if(p.placed) return; }
-  const neigh=[{dr:0,dc:-1,tx:q=>q.x-CELLW,ty:q=>q.y},{dr:0,dc:+1,tx:q=>q.x+CELLW,ty:q=>q.y},
-               {dr:-1,dc:0,tx:q=>q.x,ty:q=>q.y-CELLH},{dr:+1,dc:0,tx:q=>q.x,ty:q=>q.y+CELLH}];
-  for(const n of neigh){
-    const rr=p.r+n.dr, cc=p.c+n.dc; if(rr<0||cc<0||rr>=rows||cc>=cols) continue;
-    const q=pieces.find(pi=>pi.r===rr&&pi.c===cc&&pi.placed); if(!q) continue;
-    const tx=n.tx(q), ty=n.ty(q);
-    if(Math.hypot(p.x-tx,p.y-ty)<tol){ p.x=tx; p.y=ty; p.placed=(p.x===s.x && p.y===s.y); return; }
-  }
-}
-function pointerUp(e){ if(!dragging) return; e.preventDefault(); snapToNearest(dragging); dragging=null; draw(); checkWin(); }
-board.addEventListener("pointerdown",pointerDown,{passive:false});
-board.addEventListener("pointermove",pointerMove,{passive:false});
-board.addEventListener("pointerup",pointerUp,{passive:false});
-board.addEventListener("pointercancel",pointerUp,{passive:false});
+  const i=pieces.indexOf(p); pieces.push(...pieces.splice(i,1)); requestAnimationFrame(draw);
+},{passive:false});
+board.addEventListener("pointermove",e=>{
+  if(!dragging) return; e.preventDefault();
+  const r=board.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
+  dragging.x=x-offX; dragging.y=y-offY; requestAnimationFrame(draw);
+},{passive:false});
+board.addEventListener("pointerup",e=>{
+  if(!dragging) return; e.preventDefault();
+  const p=dragging; dragging=null;
 
-/* ===== win ===== */
+  // snap ke slot terdekat
+  const nearest=slots.reduce((best,s)=>{
+    const d=Math.hypot(p.x-s.x,p.y-s.y); return !best||d<best.d?{s,d}:{s:best.s,d:best.d};
+  },null);
+  const tol=Math.min(p.w,p.h)*0.55; // magnet kuat
+  if(nearest && nearest.d<tol){ p.x=nearest.s.x; p.y=nearest.s.y; }
+
+  draw(); checkWin();
+},{passive:false});
+
+/* ===== Win ===== */
 function checkWin(){
-  if(pieces.length && pieces.every(p=>p.placed)){
-    $("#win").style.display="flex";
-    if(mp3){ audio.currentTime=0; audio.play().catch(()=>{}); }
-    else if(window.ding){ window.ding(); }
-  }
+  const ok=pieces.every((p,i)=> p.x===slots[i].x && p.y===slots[i].y);
+  if(ok){ $("#win").style.display="flex"; if(mp3){ audio.currentTime=0; audio.play().catch(()=>{}); } else if(ding){ ding(); } }
 }
-$("#againBtn").onclick=()=>{ $("#win").style.display="none"; openSizePicker(); };
+$("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(true); };
 
-/* ===== fullscreen ===== */
-function fsSupported(){return !!(document.fullscreenEnabled||document.webkitFullscreenEnabled)}
-function isFS(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
-function enterFS(el){(el.requestFullscreen||el.webkitRequestFullscreen)?.call(el)}
-function exitFS(){(document.exitFullscreen||document.webkitExitFullscreen)?.call(document)}
-function usePseudoFS(on){document.body.classList.toggle('fs',!!on);resizeCanvas()}
-$("#fullBtn").onclick=()=>{ if(fsSupported()){ if(!isFS()) enterFS(stageEl); else exitFS(); } else { usePseudoFS(!document.body.classList.contains('fs')); } };
-
-/* ===== start game from picker ===== */
-function pickSize(n){
-  show('game');
-  // set canvas size then build
-  requestAnimationFrame(()=>{ resizeCanvas(); buildPuzzle(n); showPreview=true; $("#previewBtn").classList.add('active'); renderMini(); });
-}
-
-/* ===== init ===== */
-show('library'); // mula di library
+/* ===== Init ===== */
+resizeCanvas();
 </script>
 </body>
 </html>
