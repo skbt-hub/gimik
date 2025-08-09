@@ -29,19 +29,22 @@
   .tray{display:flex;flex-wrap:wrap;gap:8px;min-height:120px}
   .hint{background:#0f3359;border:1px dashed #1a4d82;border-radius:10px;padding:8px 10px;color:var(--muted);font-size:12px}
   .stage{position:relative;border:2px solid var(--line);border-radius:14px;min-height:60vh;overflow:hidden;touch-action:none;
-    /* tekstur kelabu ala concrete */
     background:
       radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), transparent 40%),
       radial-gradient(circle at 70% 60%, rgba(0,0,0,.15), transparent 45%),
       linear-gradient(180deg, #2f3e52, #243445 60%, #223042);
   }
-  /* fullscreen untuk semua pelayar */
+  /* Native fullscreen */
   .stage:fullscreen,.stage:-webkit-full-screen,.stage:-ms-fullscreen{
     width:100vw!important;height:100vh!important;border:none!important;border-radius:0!important
   }
+  /* Pseudo-fullscreen fallback (untuk iPad/Safari degil) */
+  body.fs .stage{
+    position:fixed!important; inset:0!important; width:100vw!important; height:100dvh!important;
+    border:none!important; border-radius:0!important; z-index:9999!important;
+  }
   canvas{position:absolute;inset:0}
   footer{padding:10px 16px;color:var(--muted);font-size:12px}
-
   .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:var(--text);
     border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
   .overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center}
@@ -79,7 +82,7 @@
 <main>
   <section class="panel">
     <h2>Palet Kepingan</h2>
-    <div id="tray" class="tray"><span class="hint">Seret kepingan ke papan & padankan. Kepingan ada tepi putih berkilat + bayang (gaya jigsaw klasik).</span></div>
+    <div id="tray" class="tray"><span class="hint">Seret kepingan ke papan & padankan. Kepingan akan “snap” bila hampir tepat.</span></div>
   </section>
 
   <section class="stage">
@@ -103,11 +106,18 @@ const toast = (m)=>{const t=$("#toast"); t.textContent=m; t.style.display='block
 /* ===== Canvas & stage ===== */
 const board=$("#board"), stageEl=board.parentElement, ctx=board.getContext("2d");
 let W,H,scale=1; const DPR=Math.max(1,window.devicePixelRatio||1);
+
 function resizeCanvas(){
   const pad=12;
-  const isFS = !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement);
-  const w = isFS ? window.innerWidth : stageEl.clientWidth;
-  const h = isFS ? window.innerHeight : Math.max(460, stageEl.clientHeight);
+  const inNativeFS = !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement);
+  const inPseudoFS = document.body.classList.contains('fs');
+
+  const vw = window.innerWidth;
+  const vh = (window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight);
+
+  const w = (inNativeFS || inPseudoFS) ? vw : stageEl.clientWidth;
+  const h = (inNativeFS || inPseudoFS) ? vh : Math.max(460, stageEl.clientHeight);
+
   W = w - pad; H = h - pad;
   board.style.left=pad/2+"px"; board.style.top=pad/2+"px";
   board.style.width=W+"px"; board.style.height=H+"px";
@@ -171,11 +181,9 @@ function buildPuzzle(){
     const bottom=(r==rows-1)?0: tabsV[r][c];
     const slot={r,c,x:ox+c*pw,y:oy+r*ph,w:pw,h:ph}; slots.push(slot);
 
-    // berselerak di kawasan papan (ala game room)
-    const randR = Math.random(); const randC = Math.random();
-    const px = (randC<0.5 ? Math.random()* (W*0.4 - pw) : (W*0.6 + Math.random()* (W*0.4 - pw)));
-    const py = (randR<0.5 ? Math.random()* (H*0.45 - ph): (H*0.55 + Math.random()* (H*0.45 - ph)));
-
+    // tabur kepingan (ala game room)
+    const px = Math.random()*(W-pw);
+    const py = Math.random()*(H-ph);
     const piece={r,c,x:px,y:py,w:pw,h:ph,placed:false,edges:{top,bottom,left,right}};
     pieces.push(piece);
   }
@@ -209,39 +217,30 @@ function jigsawPath(x,y,w,h,e){
 function drawPiece3D(p){
   if(!img) return;
   const r=scale;
-  // BAYANG jatuh (ala contoh)
+  // Bayang
   ctx.save();
   ctx.shadowColor="rgba(0,0,0,.35)";
   ctx.shadowBlur=Math.min(p.w,p.h)*0.15;
   ctx.shadowOffsetX=Math.min(p.w,p.h)*0.06;
   ctx.shadowOffsetY=Math.min(p.w,p.h)*0.06;
-
-  jigsawPath(p.x,p.y,p.w,p.h,p.edges);
-  ctx.clip();
+  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.clip();
 
   const tw=img.width*r, th=img.height*r, bx=(W-tw)/2, by=(H-th)/2;
   ctx.drawImage(img, bx, by, tw, th, bx+p.c*p.w, by+p.r*p.h, p.w, p.h);
   ctx.restore();
 
-  // TEBI PUTIH berkilat (stroke luar)
+  // Tepi putih & kontur
   ctx.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06);
-  ctx.strokeStyle="rgba(255,255,255,.95)";
-  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
+  ctx.strokeStyle="rgba(255,255,255,.95)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
+  ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
 
-  // KONTOUR gelap nipis (bagi timbul)
-  ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)";
-  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
-
-  // HIGHLIGHT lembut di atas-kiri & SHADOW di bawah-kanan (emboss)
-  const grad1=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
-  grad1.addColorStop(0,"rgba(255,255,255,.28)");
-  grad1.addColorStop(.5,"rgba(255,255,255,0)");
-  ctx.fillStyle=grad1; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
-
-  const grad2=ctx.createLinearGradient(p.x,p.y,p.x+p.w,p.y+p.h);
-  grad2.addColorStop(.5,"rgba(0,0,0,0)");
-  grad2.addColorStop(1,"rgba(0,0,0,.18)");
-  ctx.fillStyle=grad2; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
+  // Highlight lembut
+  const g1=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
+  g1.addColorStop(0,"rgba(255,255,255,.28)"); g1.addColorStop(.5,"rgba(255,255,255,0)");
+  ctx.fillStyle=g1; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
+  const g2=ctx.createLinearGradient(p.x,p.y,p.x+p.w,p.y+p.h);
+  g2.addColorStop(.5,"rgba(0,0,0,0)"); g2.addColorStop(1,"rgba(0,0,0,.18)");
+  ctx.fillStyle=g2; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
 }
 
 function draw(){
@@ -278,13 +277,23 @@ $("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(); };
 function shuffle(){ for(const p of pieces){ p.placed=false; p.x=Math.random()*(W-p.w); p.y=Math.random()*(H-p.h);} draw(); }
 $("#shuffleBtn").onclick=shuffle;
 
-/* ===== Start & Fullscreen ===== */
+/* ===== Start ===== */
 $("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} setGrid(+$("#piecesSel").value); buildPuzzle(); toast(`Puzzle ${rows*cols} keping disediakan.`); };
 
-function isFS(){return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement);}
-function enterFS(el){(el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen)?.call(el);}
-function exitFS(){(document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen)?.call(document);}
-$("#fullBtn").onclick=()=>{ if(!isFS()) enterFS(stageEl); else exitFS(); };
+/* ===== Fullscreen (native + fallback) ===== */
+function fsSupported(){ return !!(document.fullscreenEnabled||document.webkitFullscreenEnabled||document.msFullscreenEnabled); }
+function isFS(){ return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement); }
+function enterFS(el){ (el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen)?.call(el); }
+function exitFS(){ (document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen)?.call(document); }
+function usePseudoFS(on){ document.body.classList.toggle('fs',!!on); resizeCanvas(); }
+
+$("#fullBtn").onclick=()=>{ 
+  if (fsSupported()) { if(!isFS()) enterFS(stageEl); else exitFS(); }
+  else { usePseudoFS(!document.body.classList.contains('fs')); }
+};
+["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>{
+  document.addEventListener(ev, ()=>{ if(!isFS()) document.body.classList.remove('fs'); resizeCanvas(); });
+});
 
 function init(){ resizeCanvas(); }
 init();
