@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Puzzle Maker — Bulan Kebangsaan (Interlocking)</title>
+<title>Puzzle Maker — Bulan Kebangsaan (Pro)</title>
 <style>
-  :root{--bg:#0a2540;--accent:#ffd34d;--text:#eef6ff;--muted:#b8d3f0;--line:#0b2846}
+  :root{
+    --bg:#0a2540; --panel:#103d68; --accent:#ffd34d;
+    --text:#eef6ff; --muted:#b8d3f0; --line:#0b2846;
+  }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
@@ -23,16 +26,20 @@
     background:
       radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), transparent 40%),
       radial-gradient(circle at 70% 60%, rgba(0,0,0,.15), transparent 45%),
-      linear-gradient(180deg, #2f3e52, #243445 60%, #223042)}
+      linear-gradient(180deg, #2f3e52, #243445 60%, #223042);}
   .stage:fullscreen,.stage:-webkit-full-screen{width:100vw!important;height:100vh!important;border:none!important;border-radius:0!important}
   body.fs .stage{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;border:none!important;border-radius:0!important;z-index:9999!important}
   canvas{position:absolute;inset:0}
   .toggle{background:#0f3359;border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
   .toggle.active{background:var(--accent);color:#222;border-color:#caa94a;font-weight:700}
-  #miniPrev{position:absolute;right:12px;bottom:12px;width:200px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.6);background:#0b1e32;padding:6px;display:none}
-  #miniPrev canvas{width:100%;height:auto;display:block}
+  /* Preview rujukan */
+  #miniPrev{position:absolute;right:12px;bottom:12px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.6);background:#0b1e32;padding:6px;display:none}
+  #miniPrev canvas{display:block;width:100%;height:auto}
   #miniPrev .cap{font-size:12px;color:#cfe6ff;text-align:center;margin-top:4px}
+  .range{appearance:none;width:120px;height:6px;border-radius:999px;background:#244a76;outline:none}
+  .range::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:50%;background:#ffd34d;border:2px solid #bfa13b}
   .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
+  footer{padding:10px 16px;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
@@ -41,13 +48,14 @@
   <div class="controls">
     <label class="file">Gambar <input id="imgInput" type="file" accept="image/*"></label>
     <label class="file">MP3 <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3"></label>
-    <select id="piecesSel" class="select">
+    <select id="piecesSel" class="select" title="Bilangan kepingan">
       <option value="6">6 (2×3)</option><option value="8">8 (2×4)</option>
       <option value="12" selected>12 (3×4)</option><option value="14">14 (2×7)</option>
       <option value="16">16 (4×4)</option><option value="18">18 (3×6)</option>
       <option value="20">20 (4×5)</option>
     </select>
     <button id="startBtn" class="btn">Mula Puzzle</button>
+    <button id="arrangeBtn" class="btn">Susun Tepi</button>
     <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="magnetBtn" class="toggle active">Magnet</button>
@@ -59,23 +67,33 @@
 <main>
   <section class="stage">
     <canvas id="board"></canvas>
-    <div id="miniPrev"><canvas id="miniCanvas"></canvas><div class="cap">Rujukan</div></div>
+
+    <!-- Preview rujukan – boleh ubah saiz -->
+    <div id="miniPrev">
+      <canvas id="miniCanvas"></canvas>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <input id="prevSize" type="range" class="range" min="160" max="320" value="240">
+        <span class="cap">Rujukan</span>
+      </div>
+    </div>
+
     <div id="win" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff">
-      <h3 style="margin:0">TAHNIAH ANDA BERJAYA!</h3><p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
+      <h3 style="margin:0">TAHNIAH ANDA BERJAYA!</h3>
+      <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
       <button id="againBtn" class="btn">Main Lagi</button>
     </div>
   </section>
 </main>
 
 <div id="toast" class="toast"></div>
-<footer style="padding:10px 16px;color:#b8d3f0;font-size:12px">Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk membenarkan audio dimainkan automatik apabila puzzle siap.</footer>
+<footer>Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk membenarkan audio dimainkan automatik apabila puzzle siap.</footer>
 
 <script>
-/* ---------- Util ---------- */
+/* ========== Util & asas UI ========== */
 const $=s=>document.querySelector(s);
 const toast=m=>{const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1800)};
 
-/* ---------- Canvas ---------- */
+/* ========== Canvas ========== */
 const board=$("#board"), stageEl=board.parentElement, ctx=board.getContext("2d");
 let W,H,scale=1; const DPR=Math.max(1,window.devicePixelRatio||1);
 function resizeCanvas(){
@@ -88,16 +106,18 @@ function resizeCanvas(){
 addEventListener("resize",resizeCanvas);
 ["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>document.addEventListener(ev,resizeCanvas));
 
-/* ---------- Model ---------- */
+/* ========== Model ========== */
 let img=null, mp3=null, audio=new Audio(), audioCtx=null, ding=null;
 let rows=3, cols=4, pieces=[], slots=[];
 let dragging=null, offX=0, offY=0, showPreview=false, strongMagnet=true;
-let OX=0, OY=0, CELLW=0, CELLH=0; // origin & cell size di papan
+
+/* grid info utk snap & potong tepat */
+let OX=0, OY=0, CELLW=0, CELLH=0;
 
 const mapping={6:[2,3],8:[2,4],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,5]};
 function setGrid(n){[rows,cols]=mapping[n]} $("#piecesSel").onchange=e=>setGrid(+e.target.value);
 
-/* ---------- Uploads & Audio ---------- */
+/* ========== Uploads & Audio ========== */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
@@ -108,7 +128,7 @@ $("#mp3Input").addEventListener("change",e=>{ mp3=e.target.files[0]?URL.createOb
 $("#audioArmBtn").onclick=async()=>{
   try{
     if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }
-    // bunyi unlock + set ding
+    // unlock + sediakan 'ding'
     const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='sine'; o.frequency.value=880;
     g.gain.setValueAtTime(0.0001,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0.2,audioCtx.currentTime+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.25);
@@ -122,103 +142,117 @@ $("#audioArmBtn").onclick=async()=>{
   }catch{ toast("Sentuh sekali lagi (iPad)."); }
 };
 
-/* ---------- Toggles ---------- */
+/* ========== Toggles & preview ========== */
 $("#previewBtn").onclick=()=>{ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); $("#miniPrev").style.display=showPreview?"block":"none"; if(showPreview) renderMini(); };
 $("#magnetBtn").onclick=()=>{ strongMagnet=!strongMagnet; $("#magnetBtn").classList.toggle("active",strongMagnet); };
+$("#prevSize").oninput=e=>{ const box=$("#miniPrev"); box.style.width=e.target.value+"px"; if(img) renderMini(); };
 
-/* ---------- Interlocking Jigsaw Path ---------- */
-/* bentuk knob bulat (male=1, female=-1, edge=0) */
-function pathJigsaw(g, x,y,w,h, edges){
-  const r = Math.min(w,h)*0.22;      // jejari knob
-  const neck = r*0.55;               // leher knob
-  const k = Math.min(w,h)*0.08;      // sudut melengkung
+/* ========== Bentuk Jigsaw stabil (unit space 0..1) ========== */
+/* knob bulat kemas; dipetakan secara skala – elak cacat */
+function unitPathJigsaw(g, edges){ // edges: {top,right,bottom,left} -> 1(tanduk), -1(lekuk), 0(lurus)
+  const r=0.22, neck=0.55*r, k=0.08; // nisbah kekal – tak berubah ikut saiz
   g.beginPath();
-  g.moveTo(x+k, y);
+  g.moveTo(k,0);
 
-  // TOP
-  if(edges.top===0){ g.lineTo(x+w-k,y); }
+  // top
+  if(edges.top===0){ g.lineTo(1-k,0); }
   else{
-    const dir = edges.top; // 1=tanduk keluar, -1=lekuk masuk
-    const cx = x+w/2, cy = y - dir*r;
-    g.lineTo(x+w*0.3, y);
-    g.bezierCurveTo(x+w*0.38, y, cx-neck, y, cx-neck, y - dir*neck*0.15);
-    g.arc(cx, cy, r, Math.PI*(1.0+dir*0.18), Math.PI*(0.0-dir*0.18), dir>0);
-    g.bezierCurveTo(cx+neck, y, x+w*0.62, y, x+w*0.7, y);
-    g.lineTo(x+w-k, y);
+    const d=edges.top, cx=0.5, cy=0 - d*r;
+    g.lineTo(0.30,0);
+    g.bezierCurveTo(0.38,0, cx-neck,0, cx-neck, 0 - d*neck*0.15);
+    arcUnit(g, cx, cy, r, 1.0+0.18*d, 0.0-0.18*d, d>0);
+    g.bezierCurveTo(cx+neck,0, 0.62,0, 0.70,0);
+    g.lineTo(1-k,0);
   }
-  g.quadraticCurveTo(x+w,y,x+w,y+k);
+  g.quadraticCurveTo(1,0,1,k);
 
-  // RIGHT
-  if(edges.right===0){ g.lineTo(x+w,y+h-k); }
+  // right
+  if(edges.right===0){ g.lineTo(1,1-k); }
   else{
-    const dir = edges.right;
-    const cx = x+w + dir*r, cy = y+h/2;
-    g.lineTo(x+w, y+h*0.3);
-    g.bezierCurveTo(x+w, y+h*0.38, x+w, cy-neck, x+w - dir*neck*0.15, cy-neck);
-    g.arc(cx, cy, r, Math.PI*(1.5+dir*0.18), Math.PI*(0.5-dir*0.18), dir>0);
-    g.bezierCurveTo(x+w, cy+neck, x+w, y+h*0.62, x+w, y+h*0.7);
-    g.lineTo(x+w, y+h-k);
+    const d=edges.right, cx=1 + d*r, cy=0.5;
+    g.lineTo(1,0.30);
+    g.bezierCurveTo(1,0.38, 1,cy-neck, 1 - d*neck*0.15, cy-neck);
+    arcUnit(g, cx, cy, r, 1.5+0.18*d, 0.5-0.18*d, d>0);
+    g.bezierCurveTo(1,cy+neck, 1,0.62, 1,0.70);
+    g.lineTo(1,1-k);
   }
-  g.quadraticCurveTo(x+w,y+h,x+w-k,y+h);
+  g.quadraticCurveTo(1,1,1-k,1);
 
-  // BOTTOM
-  if(edges.bottom===0){ g.lineTo(x+k,y+h); }
+  // bottom
+  if(edges.bottom===0){ g.lineTo(k,1); }
   else{
-    const dir = edges.bottom;
-    const cx = x+w/2, cy = y+h + dir*r;
-    g.lineTo(x+w*0.7, y+h);
-    g.bezierCurveTo(x+w*0.62, y+h, cx+neck, y+h, cx+neck, y+h + dir*neck*0.15);
-    g.arc(cx, cy, r, Math.PI*(0.0+dir*0.18), Math.PI*(1.0-dir*0.18), dir<0);
-    g.bezierCurveTo(cx-neck, y+h, x+w*0.38, y+h, x+w*0.3, y+h);
-    g.lineTo(x+k, y+h);
+    const d=edges.bottom, cx=0.5, cy=1 + d*r;
+    g.lineTo(0.70,1);
+    g.bezierCurveTo(0.62,1, cx+neck,1, cx+neck, 1 + d*neck*0.15);
+    arcUnit(g, cx, cy, r, 0.0+0.18*d, 1.0-0.18*d, d<0);
+    g.bezierCurveTo(cx-neck,1, 0.38,1, 0.30,1);
+    g.lineTo(k,1);
   }
-  g.quadraticCurveTo(x,y+h,x,y+h-k);
+  g.quadraticCurveTo(0,1,0,1-k);
 
-  // LEFT
-  if(edges.left===0){ g.lineTo(x,y+k); }
+  // left
+  if(edges.left===0){ g.lineTo(0,k); }
   else{
-    const dir = edges.left;
-    const cx = x - dir*r, cy = y+h/2;
-    g.lineTo(x, y+h*0.7);
-    g.bezierCurveTo(x, y+h*0.62, x, cy+neck, x - dir*neck*0.15, cy+neck);
-    g.arc(cx, cy, r, Math.PI*(0.5+dir*0.18), Math.PI*(1.5-dir*0.18), dir<0);
-    g.bezierCurveTo(x, cy-neck, x, y+h*0.38, x, y+h*0.3);
-    g.lineTo(x, y+k);
+    const d=edges.left, cx=0 - d*r, cy=0.5;
+    g.lineTo(0,0.70);
+    g.bezierCurveTo(0,0.62, 0,cy+neck, 0 - d*neck*0.15, cy+neck);
+    arcUnit(g, cx, cy, r, 0.5+0.18*d, 1.5-0.18*d, d<0);
+    g.bezierCurveTo(0,cy-neck, 0,0.38, 0,0.30);
+    g.lineTo(0,k);
   }
-  g.quadraticCurveTo(x,y,x+k,y);
+  g.quadraticCurveTo(0,0,k,0);
   g.closePath();
 }
+function arcUnit(g,cx,cy,r,sa,ea,ccw){ // sa/ea dalam unit PI
+  g.arc(cx,cy,r,Math.PI*sa,Math.PI*ea,ccw);
+}
 
-/* Bitmap kepingan (laju) */
+/* buat Path2D skala mengikut x,y,w,h */
+function pathJigsawScaled(x,y,w,h,edges){
+  const p=new Path2D();
+  const g={ // adapter kecil utk Path2D
+    beginPath:()=>p.moveTo(x,y),
+    moveTo:(ax,ay)=>p.moveTo(x+ax*w,y+ay*h),
+    lineTo:(ax,ay)=>p.lineTo(x+ax*w,y+ay*h),
+    bezierCurveTo:(a1x,a1y,a2x,a2y,ax,ay)=>p.bezierCurveTo(x+a1x*w,y+a1y*h,x+a2x*w,y+a2y*h,x+ax*w,y+ay*h),
+    quadraticCurveTo:(ax,ay,bx,by)=>p.quadraticCurveTo(x+ax*w,y+ay*h,x+bx*w,y+by*h),
+    arc:(acx,acy,ar,as,ae,ccw)=>p.arc(x+acx*w,y+acy*h,ar*Math.max(w,h),as,ae,ccw),
+    closePath:()=>p.closePath()
+  };
+  unitPathJigsaw(g,edges);
+  return p;
+}
+
+/* render keping ke bitmap – tepat & laju */
 function makeBitmapPiece(p, sW, sH){
-  const c=document.createElement('canvas'), g=c.getContext('2d');
-  c.width=Math.ceil(p.w + p.w*0.5);   // lebarkan sedikit utk tanduk yang keluar dari sel
-  c.height=Math.ceil(p.h + p.h*0.5);
-  const ox=(c.width - p.w)/2, oy=(c.height - p.h)/2;
+  // beri ruang 30% utk tanduk/lekuk yang keluar
+  const pad = 0.30;
+  const cw = Math.ceil(p.w*(1+pad*2));
+  const ch = Math.ceil(p.h*(1+pad*2));
+  const c=document.createElement('canvas'); c.width=cw; c.height=ch;
+  const g=c.getContext('2d');
 
-  // KLIP bentuk jigsaw
-  g.save();
-  const edges=p.edges;
-  pathJigsaw(g, ox, oy, p.w, p.h, edges);
-  g.clip();
+  const ox = p.w*pad, oy = p.h*pad; // offset lukisan dalam bitmap
 
-  // Lukis bahagian imej milik kepingan
+  // klip bentuk jigsaw berskala
+  const path = pathJigsawScaled(ox,oy,p.w,p.h,p.edges);
+  g.save(); g.clip(path);
+
+  // potongan imej tepat: ambil segmen (sx,sy,sW,sH) → skala ke (p.w,p.h) di (ox,oy)
   const sx=p.c*sW, sy=p.r*sH;
   g.imageSmoothingQuality='high';
   g.drawImage(img, sx, sy, sW, sH, ox, oy, p.w, p.h);
   g.restore();
 
-  // Bingkai 3D ringan
+  // bingkai kemas
   g.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06);
-  g.strokeStyle="rgba(255,255,255,.95)";
-  pathJigsaw(g, ox, oy, p.w, p.h, edges); g.stroke();
-  g.lineWidth=1; g.strokeStyle="rgba(0,0,0,.28)";
-  pathJigsaw(g, ox, oy, p.w, p.h, edges); g.stroke();
+  g.strokeStyle="rgba(255,255,255,.97)"; g.stroke(path);
+  g.lineWidth=1; g.strokeStyle="rgba(0,0,0,.28)"; g.stroke(path);
 
   return {bmp:c, ox, oy};
 }
 
-/* ---------- Build ---------- */
+/* ========== Bina puzzle ========== */
 function buildPuzzle(){
   pieces=[]; slots=[];
   if(!img){toast("Muat naik gambar dahulu."); return;}
@@ -228,7 +262,7 @@ function buildPuzzle(){
   let tW,tH; if(rImg>rBox){tW=boxW; tH=boxW/rImg;} else {tH=boxH; tW=boxH*rImg;}
   scale=tW/img.width; OX=(W-tW)/2; OY=(H-tH)/2; CELLW=tW/cols; CELLH=tH/rows;
 
-  /* bina tanda male/female yang padan pada grid */
+  // janakan arah tanduk/lekuk yang padan
   const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
   const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
   for(let r=0;r<rows;r++)for(let c=0;c<cols-1;c++) tabsH[r][c]=(Math.random()>.5?1:-1);
@@ -244,97 +278,89 @@ function buildPuzzle(){
 
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    // Sebar di sekeliling imej
+    // sebar kemas di sekeliling imej
     const side=Math.floor(Math.random()*4); let px,py;
-    if(side===0){ px=Math.random()*(W-CELLW)+CELLW*0.15; py=OY - CELLH*0.9*Math.random(); }
-    else if(side===1){ px=W - (Math.random()*CELLW + CELLW*1.1); py=Math.random()*(H-CELLH); }
-    else if(side===2){ px=Math.random()*(W-CELLW)+CELLW*0.15; py=OY + tH + CELLH*0.2 + Math.random()*CELLH; }
-    else { px=OX - CELLW*0.9*Math.random(); py=Math.random()*(H-CELLH); }
+    if(side===0){ px=Math.random()*(W-CELLW)+CELLW*0.1; py=OY - CELLH*(0.5+Math.random()*0.6); }
+    else if(side===1){ px=W - (Math.random()*CELLW + CELLW*1.0); py=Math.random()*(H-CELLH); }
+    else if(side===2){ px=Math.random()*(W-CELLW)+CELLW*0.1; py=OY + tH + CELLH*(0.2+Math.random()*0.6); }
+    else { px=OX - CELLW*(0.5+Math.random()*0.5); py=Math.random()*(H-CELLH); }
 
     const p={r,c,x:px,y:py,w:CELLW,h:CELLH,placed:false,edges:{top,bottom,left,right}};
-    Object.assign(p, makeBitmapPiece(p, sW, sH)); // bmp + offset simpan dalam p
+    Object.assign(p, makeBitmapPiece(p, sW, sH)); // tambah bmp + offset
     pieces.push(p);
   }
-
   if(showPreview) renderMini();
   draw();
 }
 
-/* ---------- Render ---------- */
+/* ========== Render papan ========== */
 function draw(){
   ctx.clearRect(0,0,W,H);
-  // grid nipis (bantu padanan)
+  // garis slot halus
   ctx.save(); ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,255,255,.10)";
-  for(const s of slots) ctx.strokeRect(s.x, s.y, s.w, s.h); ctx.restore();
+  for(const s of slots) ctx.strokeRect(s.x,s.y,s.w,s.h); ctx.restore();
 
   for(const p of pieces){ if(p!==dragging) ctx.drawImage(p.bmp, p.x - p.ox, p.y - p.oy); }
   if(dragging) ctx.drawImage(dragging.bmp, dragging.x - dragging.ox, dragging.y - dragging.oy);
 }
+
+/* ========== Preview ========== */
 function renderMini(){
   const box=$("#miniPrev"), c=$("#miniCanvas"), g=c.getContext('2d'); if(!img){box.style.display="none";return;}
-  const maxW=200, r=img.width/img.height; c.width=maxW; c.height=Math.round(maxW/r); g.clearRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height); box.style.display="block";
+  const w=parseInt($("#prevSize").value,10); const r=img.width/img.height; c.width=w; c.height=Math.round(w/r);
+  g.clearRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height); box.style.width=w+"px"; box.style.display="block";
 }
 
-/* ---------- Drag + Snap (slot, grid, jiran) ---------- */
+/* ========== Drag & Snap ========== */
 let rafId=null;
 function pieceAt(px,py){
   for(let i=pieces.length-1;i>=0;i--){
-    const p=pieces[i];
-    const bx=p.x - p.ox, by=p.y - p.oy, bw=p.bmp.width, bh=p.bmp.height;
+    const p=pieces[i], bx=p.x-p.ox, by=p.y-p.oy, bw=p.bmp.width, bh=p.bmp.height;
     if(px>=bx && px<=bx+bw && py>=by && py<=by+bh) return p;
-  }
-  return null;
+  } return null;
 }
 function pointerDown(e){
   e.preventDefault(); board.setPointerCapture?.(e.pointerId);
-  const r=board.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
-  const p=pieceAt(x,y); if(!p) return;
-  dragging=p; offX=x-p.x; offY=y-p.y;
+  const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+  const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.x; offY=y-p.y;
   const i=pieces.indexOf(p); pieces.push(...pieces.splice(i,1));
-  if(!rafId){ rafId=requestAnimationFrame(()=>{rafId=null; draw();}); }
+  if(!rafId){rafId=requestAnimationFrame(()=>{rafId=null;draw();});}
 }
-function pointerMove(e){
-  if(!dragging) return; e.preventDefault();
-  const r=board.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
+function pointerMove(e){ if(!dragging) return; e.preventDefault();
+  const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   dragging.x=x-offX; dragging.y=y-offY;
-  if(!rafId){ rafId=requestAnimationFrame(()=>{rafId=null; draw();}); }
+  if(!rafId){rafId=requestAnimationFrame(()=>{rafId=null;draw();});}
 }
 function snapToNearest(p){
-  const tol = Math.min(p.w,p.h)*(strongMagnet?0.55:0.35);
+  const tol=Math.min(p.w,p.h)*(strongMagnet?0.55:0.35);
 
-  // 1) Snap ke slot sebenar
-  const s = slots[p.r*cols + p.c];
-  if(Math.hypot(p.x-s.x, p.y-s.y) < tol){ p.x=s.x; p.y=s.y; p.placed=true; return; }
+  // 1) slot sebenar
+  const s=slots[p.r*cols+p.c];
+  if(Math.hypot(p.x-s.x,p.y-s.y)<tol){ p.x=s.x; p.y=s.y; p.placed=true; return; }
 
-  // 2) Snap ke grid terdekat
-  let gc = Math.round((p.x - OX)/CELLW), gr = Math.round((p.y - OY)/CELLH);
-  gc = Math.max(0,Math.min(cols-1,gc)); gr = Math.max(0,Math.min(rows-1,gr));
-  const gs = slots[gr*cols + gc];
-  if(Math.hypot(p.x-gs.x,p.y-gs.y) < tol){ p.x=gs.x; p.y=gs.y; p.placed = (gr===p.r && gc===p.c); if(p.placed) return; }
+  // 2) grid terdekat
+  let gc=Math.round((p.x-OX)/CELLW), gr=Math.round((p.y-OY)/CELLH);
+  gc=Math.max(0,Math.min(cols-1,gc)); gr=Math.max(0,Math.min(rows-1,gr));
+  const gs=slots[gr*cols+gc];
+  if(Math.hypot(p.x-gs.x,p.y-gs.y)<tol){ p.x=gs.x; p.y=gs.y; p.placed=(gr===p.r && gc===p.c); if(p.placed) return; }
 
-  // 3) Snap ke jiran yang sudah ditempat (ikut bentuk interlock)
-  const neigh = [
-    {dr:0,dc:-1, tx:(q)=>q.x - CELLW, ty:(q)=>q.y},
-    {dr:0,dc:+1, tx:(q)=>q.x + CELLW, ty:(q)=>q.y},
-    {dr:-1,dc:0, tx:(q)=>q.x,        ty:(q)=>q.y - CELLH},
-    {dr:+1,dc:0, tx:(q)=>q.x,        ty:(q)=>q.y + CELLH},
-  ];
+  // 3) snap pada jiran yang sudah ditempat
+  const neigh=[{dr:0,dc:-1,tx:q=>q.x-CELLW,ty:q=>q.y},{dr:0,dc:+1,tx:q=>q.x+CELLW,ty:q=>q.y},
+               {dr:-1,dc:0,tx:q=>q.x,ty:q=>q.y-CELLH},{dr:+1,dc:0,tx:q=>q.x,ty:q=>q.y+CELLH}];
   for(const n of neigh){
     const rr=p.r+n.dr, cc=p.c+n.dc; if(rr<0||cc<0||rr>=rows||cc>=cols) continue;
-    const q = pieces.find(pi=>pi.r===rr&&pi.c===cc&&pi.placed);
-    if(!q) continue;
+    const q=pieces.find(pi=>pi.r===rr&&pi.c===cc&&pi.placed); if(!q) continue;
     const tx=n.tx(q), ty=n.ty(q);
-    if(Math.hypot(p.x-tx,p.y-ty) < tol){ p.x=tx; p.y=ty; p.placed=(p.x===s.x && p.y===s.y); return; }
+    if(Math.hypot(p.x-tx,p.y-ty)<tol){ p.x=tx; p.y=ty; p.placed=(p.x===s.x && p.y===s.y); return; }
   }
 }
 function pointerUp(e){ if(!dragging) return; e.preventDefault(); snapToNearest(dragging); dragging=null; draw(); checkWin(); }
-
 board.addEventListener("pointerdown",pointerDown,{passive:false});
 board.addEventListener("pointermove",pointerMove,{passive:false});
 board.addEventListener("pointerup",pointerUp,{passive:false});
 board.addEventListener("pointercancel",pointerUp,{passive:false});
 
-/* ---------- Menang & Kawalan ---------- */
+/* ========== Menang & butang util ========== */
 function checkWin(){
   if(pieces.length && pieces.every(p=>p.placed)){
     $("#win").style.display="flex";
@@ -343,11 +369,16 @@ function checkWin(){
   }
 }
 $("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(); };
-function shuffle(){ for(const p of pieces){ p.placed=false; p.x=Math.random()*(W-p.w)+p.w*0.1; p.y=Math.random()*(H-p.h)+p.h*0.1;} draw(); }
+function shuffle(){ for(const p of pieces){ p.placed=false; p.x=Math.random()*(W-p.w)+p.w*0.1; p.y=Math.random()*(H-p.h)+p.h*0.1; } draw(); }
 $("#shuffleBtn").onclick=shuffle;
-$("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} setGrid(+$("#piecesSel").value); buildPuzzle(); toast(`Puzzle ${rows*cols} keping (interlocking) siap.`); };
+$("#arrangeBtn").onclick=()=>{ // susun kemas di kiri & bawah
+  const leftX=12, gap=8; let y=12;
+  for(const p of pieces){ if(p.placed) continue; p.x=leftX+p.w*0.35; p.y=y+p.h*0.35; y+=p.h*0.65+gap; if(y>H-p.h) y=12; }
+  draw();
+};
+$("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} setGrid(+$("#piecesSel").value); buildPuzzle(); toast(`Puzzle ${rows*cols} keping (jigsaw) siap.`); };
 
-/* ---------- Fullscreen ---------- */
+/* ========== Fullscreen ========== */
 function fsSupported(){return !!(document.fullscreenEnabled||document.webkitFullscreenEnabled)}
 function isFS(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
 function enterFS(el){(el.requestFullscreen||el.webkitRequestFullscreen)?.call(el)}
@@ -356,7 +387,7 @@ function usePseudoFS(on){document.body.classList.toggle('fs',!!on);resizeCanvas(
 $("#fullBtn").onclick=()=>{ if(fsSupported()){ if(!isFS()) enterFS(stageEl); else exitFS(); } else { usePseudoFS(!document.body.classList.contains('fs')); } };
 ["fullscreenchange","webkitfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{ if(!isFS()) document.body.classList.remove('fs'); resizeCanvas(); }));
 
-/* ---------- Init ---------- */
+/* ========== Init ========== */
 resizeCanvas();
 </script>
 </body>
