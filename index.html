@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Puzzle Kebangsaan — Edisi Klasik</title>
+<title>Puzzle Kebangsaan — Klasik Bulat</title>
 <style>
   :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
   *{box-sizing:border-box}
@@ -38,10 +38,9 @@
     <select id="piecesSel" class="select">
       <option value="8" selected>8 (2×4)</option><option value="12">12 (3×4)</option>
       <option value="16">16 (4×4)</option><option value="24">24 (3×8)</option>
-      <option value="36">36 (4×9)</option>
-      <option value="48">48 (6×8)</option><option value="80">80 (8×10)</option>
-      <option value="120">120 (10×12)</option><option value="168">168 (12×14)</option>
-      <option value="224">224 (14×16)</option>
+      <option value="36">36 (4×9)</option><option value="48">48 (6×8)</option>
+      <option value="80">80 (8×10)</option><option value="120">120 (10×12)</option>
+      <option value="168">168 (12×14)</option><option value="224">224 (14×16)</option>
     </select>
 
     <button id="patternBtn" class="btn">Corak: Klasik</button>
@@ -57,7 +56,6 @@
 <main>
   <section id="stage" class="stage">
     <canvas id="board"></canvas>
-
     <div id="win">
       <h3 style="margin:0">TAHNIAH ANDA BERJAYA!</h3>
       <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
@@ -70,11 +68,11 @@
 <footer>Tip iPad: muat naik MP3 ➜ tekan <b>Bunyi: SEDIAKAN</b> (unlock Safari) ➜ <b>Mula Puzzle</b> untuk mula lagu latar.</footer>
 
 <script>
-/* ========= util ========= */
+/* ===== util ===== */
 const $=s=>document.querySelector(s);
 const toast=m=>{const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1600)};
 
-/* ========= canvas & layout ========= */
+/* ===== canvas ===== */
 const stageEl=$("#stage");
 const board=$("#board"), ctx=board.getContext("2d");
 let W,H; const DPR=Math.max(1,window.devicePixelRatio||1);
@@ -85,17 +83,17 @@ function resizeCanvas(){
 }
 addEventListener("resize",resizeCanvas);
 
-/* ========= audio ========= */
+/* ===== audio ===== */
 let img=null, mp3=null, audio=new Audio(), audioCtx=null;
 let armed=false, isPlayingBG=false;
 
-/* ========= puzzle state ========= */
+/* ===== state ===== */
 let rows=2, cols=4, pieces=[], slots=[];
 let OX=0, OY=0, CELLW=0, CELLH=0, dragging=null, offX=0, offY=0;
-let showPreview=false, viewW=0, viewH=0; // preview di stage
+let showPreview=false, viewW=0, viewH=0;
 let piecesBuilt=false, classicPattern=true;
 
-/* ========= uploads ========= */
+/* ===== uploads ===== */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
@@ -108,21 +106,17 @@ $("#mp3Input").addEventListener("change",e=>{
   toast("MP3 dimuat naik.");
 });
 
-/* ========= audio unlock ========= */
+/* ===== audio unlock ===== */
 $("#audioArmBtn").onclick=async()=>{
   try{
     if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     if(audioCtx.state==="suspended") await audioCtx.resume();
-
-    // bunyi ringkas utk unlock
     const o=audioCtx.createOscillator(), g=audioCtx.createGain();
     o.type='sine'; o.frequency.value=880;
     g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
     g.gain.linearRampToValueAtTime(0.2,audioCtx.currentTime+0.02);
     g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.25);
     o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.26);
-
-    // pra-main mp3 0.2s
     if(mp3){ audio.currentTime=0; await audio.play(); await new Promise(r=>setTimeout(r,200)); audio.pause(); audio.currentTime=0; }
     ["touchstart","pointerdown","click"].forEach(ev=>{
       window.addEventListener(ev, async ()=>{ if(audioCtx?.state==="suspended") await audioCtx.resume(); }, {passive:true});
@@ -132,7 +126,7 @@ $("#audioArmBtn").onclick=async()=>{
 };
 $("#muteBtn").onclick=()=>{ if(!mp3||!armed) return; audio.muted=!audio.muted; $("#muteBtn").textContent=audio.muted?"🔊 Unmute":"🔇 Mute"; };
 
-/* ========= fullscreen ========= */
+/* ===== fullscreen ===== */
 const isFS=()=>document.fullscreenElement||document.webkitFullscreenElement;
 $("#fsBtn").onclick=async()=>{
   try{
@@ -150,7 +144,7 @@ $("#fsBtn").onclick=async()=>{
 };
 document.addEventListener("fullscreenchange",()=>{ $("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh"; });
 
-/* ========= controls ========= */
+/* ===== controls ===== */
 const mapping={
   8:[2,4],12:[3,4],16:[4,4],24:[3,8],36:[4,9],
   48:[6,8],80:[8,10],120:[10,12],168:[12,14],224:[14,16]
@@ -173,18 +167,68 @@ $("#startBtn").onclick=async()=>{
 };
 $("#shuffleBtn").onclick=()=>{ if(isPlayingBG){ const id=setInterval(()=>{ audio.volume=Math.max(0,audio.volume-0.08); if(audio.volume<=0){clearInterval(id); audio.pause(); isPlayingBG=false;}},60);} shuffle(); };
 
-/* ========= bentuk jigsaw ========= */
-const TAB=0.18, NECK=0.38;  // knob sedikit kecil untuk grid besar
-function pathJigsaw(ctx,x,y,w,h,edges){
-  const r=Math.min(w,h)*TAB, neck=r*NECK;
-  ctx.beginPath(); ctx.moveTo(x,y);
-  if(edges.top===0){ctx.lineTo(x+w,y);}else{const d=edges.top,cy=y-d*r; ctx.lineTo(x+w/2-r,y); ctx.bezierCurveTo(x+w/2-neck,y,x+w/2-neck,y-d*neck*0.55,x+w/2,cy); ctx.bezierCurveTo(x+w/2+neck,y-d*neck*0.55,x+w/2+neck,y,x+w/2+r,y); ctx.lineTo(x+w,y);}
-  if(edges.right===0){ctx.lineTo(x+w,y+h);}else{const d=edges.right,cx=x+w+d*r; ctx.lineTo(x+w,y+h/2-r); ctx.bezierCurveTo(x+w,y+h/2-neck,x+w+d*neck*0.55,y+h/2-neck,cx,y+h/2); ctx.bezierCurveTo(x+w+d*neck*0.55,y+h/2+neck,x+w,y+h/2+neck,x+w,y+h/2+r); ctx.lineTo(x+w,y+h);}
-  if(edges.bottom===0){ctx.lineTo(x,y+h);}else{const d=edges.bottom,cy=y+h+d*r; ctx.lineTo(x+w/2+r,y+h); ctx.bezierCurveTo(x+w/2+neck,y+h,x+w/2+neck,y+h+d*neck*0.55,x+w/2,cy); ctx.bezierCurveTo(x+w/2-neck,y+h+d*neck*0.55,x+w/2-neck,y+h,x+w/2-r,y+h); ctx.lineTo(x,y+h);}
-  if(edges.left===0){ctx.closePath();}else{const d=edges.left,cx=x-d*r; ctx.lineTo(x,y+h/2+r); ctx.bezierCurveTo(x,y+h/2+neck,x-d*neck*0.55,y+h/2+neck,cx,y+h/2); ctx.bezierCurveTo(x-d*neck*0.55,y+h/2-neck,x,y+h/2-neck,x,y+h/2-r); ctx.closePath();}
+/* ===== bentuk jigsaw klasik bulat ===== */
+const TAB_R=0.22;           // jejari knob relatif
+const BOW=0.06;             // lengkung tepi
+const KAPPA=0.5522847498307936; // pekali bezier ~ bulatan
+
+function pathJigsaw(ctx, x, y, w, h, edges){
+  const r = Math.min(w,h);
+  const R = r * TAB_R;
+  const bow = r * BOW;
+  const k = KAPPA;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+
+  // TOP
+  if(edges.top===0){
+    ctx.bezierCurveTo(x + w*0.25, y - bow, x + w*0.75, y - bow, x + w, y);
+  }else{
+    const d=edges.top, cy=y - d*(R + bow*0.2), ax=x+w/2 - R, bx=x+w/2 + R;
+    ctx.bezierCurveTo(x+w*0.25, y-bow, ax, y-bow, ax, y);
+    ctx.bezierCurveTo(ax, y + d*R*k, x+w/2 - R*k, cy, x+w/2, cy);
+    ctx.bezierCurveTo(x+w/2 + R*k, cy, bx, y + d*R*k, bx, y);
+    ctx.bezierCurveTo(bx, y-bow, x+w*0.75, y-bow, x+w, y);
+  }
+
+  // RIGHT
+  if(edges.right===0){
+    ctx.bezierCurveTo(x+w + bow, y + h*0.25, x+w + bow, y + h*0.75, x+w, y+h);
+  }else{
+    const d=edges.right, cx=x+w + d*(R + bow*0.2), ay=y+h/2 - R, by=y+h/2 + R;
+    ctx.bezierCurveTo(x+w + bow, y + h*0.25, x+w + bow, ay, x+w, ay);
+    ctx.bezierCurveTo(x+w + d*R*k, ay, cx, y+h/2 - R*k, cx, y+h/2);
+    ctx.bezierCurveTo(cx, y+h/2 + R*k, x+w + d*R*k, by, x+w, by);
+    ctx.bezierCurveTo(x+w + bow, by, x+w + bow, y + h*0.75, x+w, y+h);
+  }
+
+  // BOTTOM
+  if(edges.bottom===0){
+    ctx.bezierCurveTo(x+w*0.75, y+h + bow, x+w*0.25, y+h + bow, x, y+h);
+  }else{
+    const d=edges.bottom, cy=y+h + d*(R + bow*0.2), ax=x+w/2 + R, bx=x+w/2 - R;
+    ctx.bezierCurveTo(x+w*0.75, y+h + bow, ax, y+h + bow, ax, y+h);
+    ctx.bezierCurveTo(ax, y+h - d*R*k, x+w/2 + R*k, cy, x+w/2, cy);
+    ctx.bezierCurveTo(x+w/2 - R*k, cy, bx, y+h - d*R*k, bx, y+h);
+    ctx.bezierCurveTo(bx, y+h + bow, x+w*0.25, y+h + bow, x, y+h);
+  }
+
+  // LEFT
+  if(edges.left===0){
+    ctx.bezierCurveTo(x - bow, y + h*0.75, x - bow, y + h*0.25, x, y);
+  }else{
+    const d=edges.left, cx=x - d*(R + bow*0.2), ay=y+h/2 + R, by=y+h/2 - R;
+    ctx.bezierCurveTo(x - bow, y + h*0.75, x - bow, ay, x, ay);
+    ctx.bezierCurveTo(x - d*R*k, ay, cx, y+h/2 + R*k, cx, y+h/2);
+    ctx.bezierCurveTo(cx, y+h/2 - R*k, x - d*R*k, by, x, by);
+    ctx.bezierCurveTo(x - bow, by, x - bow, y + h*0.25, x, y);
+  }
+
+  ctx.closePath();
 }
 
-/* ========= bina puzzle ========= */
+/* ===== bina puzzle ===== */
 function buildPuzzle(){
   pieces=[]; slots=[]; piecesBuilt=true;
   const margin=20, boxW=W-margin*2, boxH=H-margin*2;
@@ -192,19 +236,13 @@ function buildPuzzle(){
   let tW,tH; if(rImg>rBox){tW=boxW; tH=boxW/rImg;} else {tH=boxH; tW=boxH*rImg;}
   viewW=tW; viewH=tH; OX=(W-tW)/2; OY=(H-tH)/2; CELLW=tW/cols; CELLH=tH/rows;
 
-  // tab/lekuk dalaman: klasik (selang-seli) atau rawak
+  // corak selang-seli (klasik) atau rawak
   const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
   const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols-1;c++){
-      tabsH[r][c] = classicPattern ? ((r+c)%2===0?1:-1) : (Math.random()>.5?1:-1);
-    }
-  }
-  for(let r=0;r<rows-1;r++){
-    for(let c=0;c<cols;c++){
-      tabsV[r][c] = classicPattern ? ((r+c)%2===0?1:-1) : (Math.random()>.5?1:-1);
-    }
-  }
+  for(let r=0;r<rows;r++) for(let c=0;c<cols-1;c++)
+    tabsH[r][c]= classicPattern ? ((r+c)%2===0?1:-1) : (Math.random()>.5?1:-1);
+  for(let r=0;r<rows-1;r++) for(let c=0;c<cols;c++)
+    tabsV[r][c]= classicPattern ? ((r+c)%2===0?1:-1) : (Math.random()>.5?1:-1);
 
   const sW=img.width/cols, sH=img.height/rows;
 
@@ -216,7 +254,8 @@ function buildPuzzle(){
 
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    const PAD=0.28, cw=Math.ceil(CELLW*(1+PAD*2)), ch=Math.ceil(CELLH*(1+PAD*2));
+    const PAD=0.24; // ruang lebih supaya knob bulat tak terpotong
+    const cw=Math.ceil(CELLW*(1+PAD*2)), ch=Math.ceil(CELLH*(1+PAD*2));
     const bmp=document.createElement('canvas'); bmp.width=cw; bmp.height=ch;
     const g=bmp.getContext('2d'); g.imageSmoothingQuality='high'; g.lineJoin='round'; g.lineCap='round';
     const ox=CELLW*PAD, oy=CELLH*PAD;
@@ -226,16 +265,16 @@ function buildPuzzle(){
     const sx=c*sW, sy=r*sH; g.drawImage(img, sx, sy, sW, sH, ox, oy, CELLW, CELLH);
     g.restore();
 
-    // bevel + stroke
+    // bevel + stroke nipis untuk gaya klasik
     g.save(); g.clip(); g.globalCompositeOperation='multiply';
     const grad=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
-    grad.addColorStop(0,'rgba(255,255,255,.15)'); grad.addColorStop(1,'rgba(0,0,0,.15)');
+    grad.addColorStop(0,'rgba(255,255,255,.14)'); grad.addColorStop(1,'rgba(0,0,0,.14)');
     g.fillStyle=grad; g.fillRect(ox-2,oy-2,CELLW+4,CELLH+4); g.restore();
 
-    g.shadowColor='rgba(0,0,0,.35)'; g.shadowBlur=8; g.shadowOffsetY=2;
-    g.lineWidth=Math.max(2,Math.min(CELLW,CELLH)*0.06); g.strokeStyle='rgba(255,255,255,.98)';
+    g.shadowColor='rgba(0,0,0,.30)'; g.shadowBlur=7; g.shadowOffsetY=2;
+    g.lineWidth=Math.max(1.5,Math.min(CELLW,CELLH)*0.045); g.strokeStyle='rgba(255,255,255,.98)';
     pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
-    g.shadowColor='transparent'; g.lineWidth=1; g.strokeStyle='rgba(0,0,0,.22)';
+    g.shadowColor='transparent'; g.lineWidth=1; g.strokeStyle='rgba(0,0,0,.18)';
     pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
 
     const target={x:slot.x, y:slot.y};
@@ -244,7 +283,7 @@ function buildPuzzle(){
   shuffle(true);
 }
 
-/* ========= susun rawak ========= */
+/* ===== susun rawak ===== */
 function shuffle(first=false){
   if(!piecesBuilt) return;
   const idx=[...Array(slots.length).keys()];
@@ -253,18 +292,14 @@ function shuffle(first=false){
   draw();
 }
 
-/* ========= lukis ========= */
+/* ===== lukis ===== */
 function draw(){
   ctx.clearRect(0,0,W,H);
-
-  // PREVIEW dalam stage
   if(showPreview && img && viewW>0 && viewH>0){
     ctx.save(); ctx.globalAlpha=0.28;
     ctx.drawImage(img, 0,0, img.width, img.height, OX, OY, viewW, viewH);
     ctx.restore();
   }
-
-  // grid slot
   ctx.save(); ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,255,255,.12)";
   for(const s of slots) ctx.strokeRect(s.x,s.y,s.w,s.h); ctx.restore();
 
@@ -272,7 +307,7 @@ function draw(){
   if(dragging) ctx.drawImage(dragging.bmp, dragging.x-dragging.ox, dragging.y-dragging.oy);
 }
 
-/* ========= drag & snap ========= */
+/* ===== drag & snap ===== */
 function pieceAt(px,py){
   for(let i=pieces.length-1;i>=0;i--){
     const p=pieces[i], bx=p.x-p.ox, by=p.y-p.oy, bw=p.bmp.width, bh=p.bmp.height;
@@ -302,7 +337,7 @@ board.addEventListener("pointerup",e=>{
   const p=dragging; dragging=null; snapTo(p); draw(); checkWin();
 },{passive:false});
 
-/* ========= menang ========= */
+/* ===== menang ===== */
 function checkWin(){
   const ok=pieces.length && pieces.every(p=> Math.abs(p.x-p.target.x)<0.5 && Math.abs(p.y-p.target.y)<0.5 );
   if(ok){
@@ -311,7 +346,6 @@ function checkWin(){
       const id=setInterval(()=>{ audio.volume=Math.max(0, audio.volume-0.08);
         if(audio.volume<=0){ clearInterval(id); audio.pause(); isPlayingBG=false; } },60);
     }
-    // ding kecil penamat (jika unlock)
     if(audioCtx){
       const o2=audioCtx.createOscillator(), g2=audioCtx.createGain();
       o2.type='triangle'; o2.frequency.value=990;
@@ -324,7 +358,7 @@ function checkWin(){
 }
 $("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(true); };
 
-/* ========= init ========= */
+/* ===== init ===== */
 resizeCanvas();
 </script>
 </body>
