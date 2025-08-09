@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Puzzle Kebangsaan — Klasik Bulat</title>
+<title>Puzzle Kebangsaan — Edisi Pro</title>
 <style>
   :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
   *{box-sizing:border-box}
@@ -167,64 +167,55 @@ $("#startBtn").onclick=async()=>{
 };
 $("#shuffleBtn").onclick=()=>{ if(isPlayingBG){ const id=setInterval(()=>{ audio.volume=Math.max(0,audio.volume-0.08); if(audio.volume<=0){clearInterval(id); audio.pause(); isPlayingBG=false;}},60);} shuffle(); };
 
-/* ===== bentuk jigsaw klasik bulat ===== */
-const TAB_R=0.22;           // jejari knob relatif
-const BOW=0.06;             // lengkung tepi
-const KAPPA=0.5522847498307936; // bezier ~ bulatan
+/* ===== bentuk jigsaw pro ===== */
+const TAB_R=0.20;   // jejari knob
+const BOW=0.035;    // lengkung tepi halus
+const INSET=0.10;   // leher knob
+const KAPPA=0.5522847498307936;
 
 function pathJigsaw(ctx, x, y, w, h, edges){
-  const r = Math.min(w,h);
-  const R = r * TAB_R;
-  const bow = r * BOW;
-  const k = KAPPA;
-
-  ctx.beginPath();
-  ctx.moveTo(x, y);
+  const r=Math.min(w,h), R=r*TAB_R, bow=r*BOW, nk=R*INSET, k=KAPPA;
+  ctx.beginPath(); ctx.moveTo(x,y);
 
   // TOP
-  if(edges.top===0){
-    ctx.bezierCurveTo(x + w*0.25, y - bow, x + w*0.75, y - bow, x + w, y);
-  }else{
-    const d=edges.top, cy=y - d*(R + bow*0.2), ax=x+w/2 - R, bx=x+w/2 + R;
-    ctx.bezierCurveTo(x+w*0.25, y-bow, ax, y-bow, ax, y);
-    ctx.bezierCurveTo(ax, y + d*R*k, x+w/2 - R*k, cy, x+w/2, cy);
-    ctx.bezierCurveTo(x+w/2 + R*k, cy, bx, y + d*R*k, bx, y);
-    ctx.bezierCurveTo(bx, y-bow, x+w*0.75, y-bow, x+w, y);
+  if(edges.top===0){ ctx.bezierCurveTo(x+w*.25,y-bow, x+w*.75,y-bow, x+w,y); }
+  else{
+    const d=edges.top, cy=y - d*(R+bow*.15), L=x+w/2-R, Rr=x+w/2+R;
+    ctx.bezierCurveTo(x+w*.25,y-bow, L-nk,y-bow, L,y);
+    ctx.bezierCurveTo(L, y+d*R*k, x+w/2-R*k, cy, x+w/2, cy);
+    ctx.bezierCurveTo(x+w/2+R*k, cy, Rr, y+d*R*k, Rr, y);
+    ctx.bezierCurveTo(Rr+nk, y-bow, x+w*.75,y-bow, x+w,y);
   }
 
   // RIGHT
-  if(edges.right===0){
-    ctx.bezierCurveTo(x+w + bow, y + h*0.25, x+w + bow, y + h*0.75, x+w, y+h);
-  }else{
-    const d=edges.right, cx=x+w + d*(R + bow*0.2), ay=y+h/2 - R, by=y+h/2 + R;
-    ctx.bezierCurveTo(x+w + bow, y + h*0.25, x+w + bow, ay, x+w, ay);
-    ctx.bezierCurveTo(x+w + d*R*k, ay, cx, y+h/2 - R*k, cx, y+h/2);
-    ctx.bezierCurveTo(cx, y+h/2 + R*k, x+w + d*R*k, by, x+w, by);
-    ctx.bezierCurveTo(x+w + bow, by, x+w + bow, y + h*0.75, x+w, y+h);
+  if(edges.right===0){ ctx.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow,y+h*.75, x+w,y+h); }
+  else{
+    const d=edges.right, cx=x+w + d*(R+bow*.15), T=y+h/2-R, B=y+h/2+R;
+    ctx.bezierCurveTo(x+w+bow, y+h*.25, x+w+bow, T-nk, x+w, T);
+    ctx.bezierCurveTo(x+w+d*R*k, T, cx, y+h/2-R*k, cx, y+h/2);
+    ctx.bezierCurveTo(cx, y+h/2+R*k, x+w+d*R*k, B, x+w, B);
+    ctx.bezierCurveTo(x+w+bow, B+nk, x+w+bow, y+h*.75, x+w, y+h);
   }
 
   // BOTTOM
-  if(edges.bottom===0){
-    ctx.bezierCurveTo(x+w*0.75, y+h + bow, x+w*0.25, y+h + bow, x, y+h);
-  }else{
-    const d=edges.bottom, cy=y+h + d*(R + bow*0.2), ax=x+w/2 + R, bx=x+w/2 - R;
-    ctx.bezierCurveTo(x+w*0.75, y+h + bow, ax, y+h + bow, ax, y+h);
-    ctx.bezierCurveTo(ax, y+h - d*R*k, x+w/2 + R*k, cy, x+w/2, cy);
-    ctx.bezierCurveTo(x+w/2 - R*k, cy, bx, y+h - d*R*k, bx, y+h);
-    ctx.bezierCurveTo(bx, y+h + bow, x+w*0.25, y+h + bow, x, y+h);
+  if(edges.bottom===0){ ctx.bezierCurveTo(x+w*.75,y+h+bow, x+w*.25,y+h+bow, x,y+h); }
+  else{
+    const d=edges.bottom, cy=y+h + d*(R+bow*.15), Rr=x+w/2+R, L=x+w/2-R;
+    ctx.bezierCurveTo(x+w*.75, y+h+bow, Rr+nk, y+h+bow, Rr, y+h);
+    ctx.bezierCurveTo(Rr, y+h-d*R*k, x+w/2+R*k, cy, x+w/2, cy);
+    ctx.bezierCurveTo(x+w/2-R*k, cy, L, y+h-d*R*k, L, y+h);
+    ctx.bezierCurveTo(L-nk, y+h+bow, x+w*.25, y+h+bow, x, y+h);
   }
 
   // LEFT
-  if(edges.left===0){
-    ctx.bezierCurveTo(x - bow, y + h*0.75, x - bow, y + h*0.25, x, y);
-  }else{
-    const d=edges.left, cx=x - d*(R + bow*0.2), ay=y+h/2 + R, by=y+h/2 - R;
-    ctx.bezierCurveTo(x - bow, y + h*0.75, x - bow, ay, x, ay);
-    ctx.bezierCurveTo(x - d*R*k, ay, cx, y+h/2 + R*k, cx, y+h/2);
-    ctx.bezierCurveTo(cx, y+h/2 - R*k, x - d*R*k, by, x, by);
-    ctx.bezierCurveTo(x - bow, by, x - bow, y + h*0.25, x, y);
+  if(edges.left===0){ ctx.bezierCurveTo(x-bow,y+h*.75, x-bow,y+h*.25, x,y); }
+  else{
+    const d=edges.left, cx=x - d*(R+bow*.15), B=y+h/2+R, T=y+h/2-R;
+    ctx.bezierCurveTo(x-bow, y+h*.75, x-bow, B+nk, x, B);
+    ctx.bezierCurveTo(x-d*R*k, B, cx, y+h/2+R*k, cx, y+h/2);
+    ctx.bezierCurveTo(cx, y+h/2-R*k, x-d*R*k, T, x, T);
+    ctx.bezierCurveTo(x-bow, T-nk, x-bow, y+h*.25, x, y);
   }
-
   ctx.closePath();
 }
 
@@ -254,28 +245,40 @@ function buildPuzzle(){
 
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    const PAD=0.24; // ruang lebih utk knob bulat
-    const cw=Math.ceil(CELLW*(1+PAD*2)), ch=Math.ceil(CELLH*(1+PAD*2));
+    /* ---------- RENDER KEPINGAN GAYA PRO ---------- */
+    const PAD=0.22, SCALE=2;
+    const cw=Math.ceil(CELLW*(1+PAD*2)*SCALE), ch=Math.ceil(CELLH*(1+PAD*2)*SCALE);
     const bmp=document.createElement('canvas'); bmp.width=cw; bmp.height=ch;
-    const g=bmp.getContext('2d'); g.imageSmoothingQuality='high'; g.lineJoin='round'; g.lineCap='round';
+    const g=bmp.getContext('2d',{alpha:true}); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    g.scale(SCALE,SCALE);
     const ox=CELLW*PAD, oy=CELLH*PAD;
 
+    // path & klip
     pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right});
     g.save(); g.clip();
     const sx=c*sW, sy=r*sH; g.drawImage(img, sx, sy, sW, sH, ox, oy, CELLW, CELLH);
     g.restore();
 
-    // bevel + stroke nipis
-    g.save(); g.clip(); g.globalCompositeOperation='multiply';
-    const grad=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
-    grad.addColorStop(0,'rgba(255,255,255,.14)'); grad.addColorStop(1,'rgba(0,0,0,.14)');
-    g.fillStyle=grad; g.fillRect(ox-2,oy-2,CELLW+4,CELLH+4); g.restore();
+    // inner shadow lembut
+    g.save(); g.clip();
+    let ish=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
+    ish.addColorStop(0,'rgba(0,0,0,.10)'); ish.addColorStop(0.5,'rgba(0,0,0,0)'); ish.addColorStop(1,'rgba(255,255,255,0)');
+    g.globalCompositeOperation='multiply'; g.fillStyle=ish; g.fillRect(ox-4,oy-4,CELLW+8,CELLH+8); g.restore();
 
-    g.shadowColor='rgba(0,0,0,.30)'; g.shadowBlur=7; g.shadowOffsetY=2;
-    g.lineWidth=Math.max(1.5,Math.min(CELLW,CELLH)*0.045); g.strokeStyle='rgba(255,255,255,.98)';
-    pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
-    g.shadowColor='transparent'; g.lineWidth=1; g.strokeStyle='rgba(0,0,0,.18)';
-    pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
+    // bevel + stroke putih
+    g.save(); g.shadowColor='rgba(0,0,0,.28)'; g.shadowBlur=6; g.shadowOffsetY=2;
+    g.lineJoin='round'; g.lineCap='round'; g.lineWidth=Math.max(1.4,Math.min(CELLW,CELLH)*0.040);
+    g.strokeStyle='rgba(255,255,255,.98)'; pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke(); g.restore();
+
+    // inner stroke gelap
+    g.save(); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=0.9; g.strokeStyle='rgba(0,0,0,.18)';
+    pathJigsaw(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke(); g.restore();
+
+    // gloss highlight
+    g.save(); g.clip(); const gloss=g.createLinearGradient(ox,oy, ox, oy+CELLH);
+    gloss.addColorStop(0,'rgba(255,255,255,.20)'); gloss.addColorStop(0.35,'rgba(255,255,255,.06)'); gloss.addColorStop(0.55,'rgba(255,255,255,0)');
+    g.globalCompositeOperation='screen'; g.fillStyle=gloss; g.fillRect(ox,oy,CELLW,CELLH); g.restore();
+    /* ---------------------------------------------- */
 
     const target={x:slot.x, y:slot.y};
     pieces.push({r,c,x:slot.x,y:slot.y,w:CELLW,h:CELLH,ox,oy,bmp,placed:false,target});
@@ -300,11 +303,21 @@ function draw(){
     ctx.drawImage(img, 0,0, img.width, img.height, OX, OY, viewW, viewH);
     ctx.restore();
   }
-  ctx.save(); ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,255,255,.12)";
+  // garisan grid halus (membantu rujukan)
+  ctx.save(); ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,255,255,.10)";
   for(const s of slots) ctx.strokeRect(s.x,s.y,s.w,s.h); ctx.restore();
 
   for(const p of pieces){ if(p!==dragging) ctx.drawImage(p.bmp, p.x-p.ox, p.y-p.oy); }
   if(dragging) ctx.drawImage(dragging.bmp, dragging.x-dragging.ox, dragging.y-dragging.oy);
+
+  // bila preview ON atau puzzle siap, lukis sambungan halus atas imej (gaya “Game Room”)
+  const finished = pieces.length && pieces.every(p=>p.placed);
+  if((showPreview || finished) && img){
+    ctx.save(); ctx.globalAlpha=0.12; ctx.strokeStyle="#000"; ctx.lineWidth=1;
+    for(let i=1;i<cols;i++){ const x=OX+i*CELLW; ctx.beginPath(); ctx.moveTo(x,OY); ctx.lineTo(x,OY+viewH); ctx.stroke(); }
+    for(let j=1;j<rows;j++){ const y=OY+j*CELLH; ctx.beginPath(); ctx.moveTo(OX,y); ctx.lineTo(OX+viewW,y); ctx.stroke(); }
+    ctx.restore();
+  }
 }
 
 /* ===== drag & snap-to-grid tepat ===== */
