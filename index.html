@@ -6,7 +6,7 @@
 <title>Puzzle Maker — Bulan Kebangsaan</title>
 <style>
   :root{
-    --bg:#0a2540; --panel:#103d68; --panel-2:#0e2d52; --accent:#ffd34d;
+    --bg:#0a2540; --panel:#103d68; --board:#0e2d52; --accent:#ffd34d;
     --text:#eef6ff; --muted:#b8d3f0; --line:#0b2846;
   }
   *{box-sizing:border-box}
@@ -14,13 +14,10 @@
     font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);
-    border-bottom:2px solid var(--line);position:sticky;top:0;z-index:5}
+    border-bottom:2px solid var(--line)}
   .brand{display:flex;align-items:center;gap:10px}
   .logo{width:28px;height:28px;border-radius:6px;background:conic-gradient(#fff 0 25%,#cc0001 0 50%,#010066 0 75%,#ffcc00 0 100%);box-shadow:0 0 0 2px #07223f inset}
   .title{font-weight:800;margin:0;font-size:18px;letter-spacing:.2px}
-  nav{display:flex;gap:6px}
-  .tab{padding:8px 12px;border-radius:12px;border:1px solid #1a4d82;background:#0f3359;color:var(--text);font-size:14px}
-  .tab.active{background:var(--accent);color:#1e1e1e;border-color:#caa94a;font-weight:700}
   .controls{display:flex;flex-wrap:wrap;gap:8px}
   .btn,.select,.file{background:#0f3359;color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
   .btn:hover{background:#134674}
@@ -31,9 +28,17 @@
   .panel h2{margin:0 0 8px 0;font-size:14px;color:var(--muted);font-weight:600}
   .tray{display:flex;flex-wrap:wrap;gap:8px;min-height:120px}
   .hint{background:#0f3359;border:1px dashed #1a4d82;border-radius:10px;padding:8px 10px;color:var(--muted);font-size:12px}
-  .stage{position:relative;background:var(--panel-2);border:2px solid var(--line);border-radius:14px;min-height:60vh;overflow:hidden;touch-action:none}
-  /* pastikan elemen stage benar-benar memenuhi paparan semasa fullscreen */
-  .stage:fullscreen{border-radius:0;border:none}
+  .stage{position:relative;border:2px solid var(--line);border-radius:14px;min-height:60vh;overflow:hidden;touch-action:none;
+    /* tekstur kelabu ala concrete */
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), transparent 40%),
+      radial-gradient(circle at 70% 60%, rgba(0,0,0,.15), transparent 45%),
+      linear-gradient(180deg, #2f3e52, #243445 60%, #223042);
+  }
+  /* fullscreen untuk semua pelayar */
+  .stage:fullscreen,.stage:-webkit-full-screen,.stage:-ms-fullscreen{
+    width:100vw!important;height:100vh!important;border:none!important;border-radius:0!important
+  }
   canvas{position:absolute;inset:0}
   footer{padding:10px 16px;color:var(--muted);font-size:12px}
 
@@ -43,6 +48,8 @@
   .overlay h3{margin:0;font-size:24px}
   .overlay p{margin:0}
   .overlay .btn{background:var(--accent);color:#222;border-color:#caa94a}
+  .toggle{background:#0f3359;border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
+  .toggle.active{background:var(--accent);color:#222;border-color:#caa94a;font-weight:700}
 </style>
 </head>
 <body>
@@ -51,11 +58,6 @@
     <div class="logo" aria-hidden="true"></div>
     <h1 class="title">Selamat Menyambut Bulan Kebangsaan ke-68</h1>
   </div>
-  <nav>
-    <button class="tab active" aria-pressed="true">Create</button>
-    <button class="tab" disabled>Library</button>
-    <button class="tab" disabled>Games</button>
-  </nav>
   <div class="controls">
     <label class="file">Gambar <input id="imgInput" type="file" accept="image/*"></label>
     <label class="file">MP3 <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3"></label>
@@ -65,8 +67,10 @@
       <option value="16">16 (4×4)</option><option value="18">18 (3×6)</option>
       <option value="20">20 (4×5)</option>
     </select>
-    <button id="startBtn" class="btn">Mula</button>
+    <button id="startBtn" class="btn">Mula Puzzle</button>
     <button id="shuffleBtn" class="btn">Kacau</button>
+    <button id="previewBtn" class="toggle">Preview</button>
+    <button id="magnetBtn" class="toggle active">Magnet</button>
     <button id="audioArmBtn" class="btn">Bunyi: SEDIAKAN</button>
     <button id="fullBtn" class="btn">Skrin Penuh</button>
   </div>
@@ -75,7 +79,7 @@
 <main>
   <section class="panel">
     <h2>Palet Kepingan</h2>
-    <div id="tray" class="tray"><span class="hint">Muat naik gambar → pilih bilangan kepingan → tekan <b>Mula</b>.</span></div>
+    <div id="tray" class="tray"><span class="hint">Seret kepingan ke papan & padankan. Kepingan ada tepi putih berkilat + bayang (gaya jigsaw klasik).</span></div>
   </section>
 
   <section class="stage">
@@ -92,22 +96,19 @@
 <footer>Tip iPad: selepas muat naik MP3, tekan <b>Bunyi: SEDIAKAN</b> sekali untuk membenarkan audio dimainkan automatik apabila puzzle siap.</footer>
 
 <script>
-/* ==== Util UI ==== */
+/* ===== Util ===== */
 const $ = s=>document.querySelector(s);
 const toast = (m)=>{const t=$("#toast"); t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',2200);};
 
-/* ==== Canvas setup ==== */
+/* ===== Canvas & stage ===== */
 const board=$("#board"), stageEl=board.parentElement, ctx=board.getContext("2d");
 let W,H,scale=1; const DPR=Math.max(1,window.devicePixelRatio||1);
-
 function resizeCanvas(){
   const pad=12;
-  // apabila fullscreen, ambil saiz viewport terus
-  const isFS = !!document.fullscreenElement;
+  const isFS = !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement);
   const w = isFS ? window.innerWidth : stageEl.clientWidth;
   const h = isFS ? window.innerHeight : Math.max(460, stageEl.clientHeight);
   W = w - pad; H = h - pad;
-
   board.style.left=pad/2+"px"; board.style.top=pad/2+"px";
   board.style.width=W+"px"; board.style.height=H+"px";
   board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR);
@@ -115,16 +116,17 @@ function resizeCanvas(){
   draw();
 }
 addEventListener("resize",resizeCanvas);
-document.addEventListener("fullscreenchange",resizeCanvas);
+["fullscreenchange","webkitfullscreenchange","msfullscreenchange"].forEach(ev=>document.addEventListener(ev,resizeCanvas));
 
-/* ==== Puzzle state ==== */
+/* ===== Model ===== */
 let img=null, mp3=null, audio=new Audio();
 let rows=3, cols=4, pieces=[], slots=[], dragging=null, offX=0, offY=0;
+let showPreview=false, strongMagnet=true;
 const mapping={6:[2,3],8:[2,4],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,5]};
 function setGrid(n){[rows,cols]=mapping[n];}
 $("#piecesSel").onchange=e=>setGrid(+e.target.value);
 
-/* uploads */
+/* Uploads */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
@@ -136,14 +138,17 @@ $("#mp3Input").addEventListener("change",e=>{
   if(mp3){ audio.src=mp3; toast("MP3 dimuat naik."); }
 });
 $("#audioArmBtn").onclick=async()=>{
-  try{
-    if(!mp3){toast("Muat naik MP3 dahulu."); return;}
+  try{ if(!mp3){toast("Muat naik MP3 dahulu."); return;}
     audio.src=mp3; await audio.play(); await new Promise(r=>setTimeout(r,120));
     audio.pause(); audio.currentTime=0; toast("Audio sedia untuk auto-play.");
   }catch{ toast("Tekan sekali lagi (iPad memerlukan sentuhan)."); }
 };
 
-/* ==== Bina jigsaw ==== */
+/* Toggles */
+$("#previewBtn").onclick=()=>{ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); draw(); };
+$("#magnetBtn").onclick=()=>{ strongMagnet=!strongMagnet; $("#magnetBtn").classList.toggle("active",strongMagnet); };
+
+/* ===== Build puzzle ===== */
 function buildPuzzle(){
   pieces=[]; slots=[];
   if(!img){toast("Sila muat naik gambar terlebih dahulu."); return;}
@@ -153,7 +158,7 @@ function buildPuzzle(){
   scale=tW/img.width; const ox=(W-tW)/2, oy=(H-tH)/2;
   const pw=tW/cols, ph=tH/rows;
 
-  // Tab bentuk
+  // bentuk tab
   const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
   const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
   for(let r=0;r<rows;r++)for(let c=0;c<cols-1;c++) tabsH[r][c]=Math.random()>.5?1:-1;
@@ -165,20 +170,28 @@ function buildPuzzle(){
     const top   =(r==0)?0: -tabsV[r-1][c];
     const bottom=(r==rows-1)?0: tabsV[r][c];
     const slot={r,c,x:ox+c*pw,y:oy+r*ph,w:pw,h:ph}; slots.push(slot);
-    const piece={r,c,x:Math.random()*(W-pw),y:Math.random()*(H-ph),w:pw,h:ph,placed:false,edges:{top,bottom,left,right}};
+
+    // berselerak di kawasan papan (ala game room)
+    const randR = Math.random(); const randC = Math.random();
+    const px = (randC<0.5 ? Math.random()* (W*0.4 - pw) : (W*0.6 + Math.random()* (W*0.4 - pw)));
+    const py = (randR<0.5 ? Math.random()* (H*0.45 - ph): (H*0.55 + Math.random()* (H*0.45 - ph)));
+
+    const piece={r,c,x:px,y:py,w:pw,h:ph,placed:false,edges:{top,bottom,left,right}};
     pieces.push(piece);
   }
-
   const tray=$("#tray"); tray.innerHTML="";
-  tray.append(Object.assign(document.createElement("span"),{className:"hint",textContent:"Seret kepingan ke papan. Kepingan akan 'snap' bila hampir tepat."}));
+  tray.append(Object.assign(document.createElement("span"),{className:"hint",textContent:"Tip: hidupkan 'Preview' untuk rujukan imej; 'Magnet' untuk snap lebih kuat."}));
   draw();
 }
 
+/* ===== Render ===== */
 function drawBackground(){
   ctx.clearRect(0,0,W,H);
-  if(img){ ctx.globalAlpha=.14;
+  if(showPreview && img){
+    ctx.globalAlpha=.18;
     const tw=img.width*scale, th=img.height*scale, x=(W-tw)/2, y=(H-th)/2;
-    ctx.drawImage(img,x,y,tw,th); ctx.globalAlpha=1;
+    ctx.drawImage(img,x,y,tw,th);
+    ctx.globalAlpha=1;
   }
 }
 function jigsawPath(x,y,w,h,e){
@@ -192,32 +205,67 @@ function jigsawPath(x,y,w,h,e){
   if(e.left===0){ctx.lineTo(x,y+k);}else{const d=e.left; ctx.lineTo(x,y+h*.65); ctx.bezierCurveTo(x-d*tab,y+h*.65,x-d*tab,y+h*.35,x,y+h*.35); ctx.lineTo(x,y+k);}
   ctx.quadraticCurveTo(x,y,x+k,y); ctx.closePath();
 }
-function drawPiece(p){
+
+function drawPiece3D(p){
   if(!img) return;
-  const r=scale; ctx.save();
-  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.clip();
+  const r=scale;
+  // BAYANG jatuh (ala contoh)
+  ctx.save();
+  ctx.shadowColor="rgba(0,0,0,.35)";
+  ctx.shadowBlur=Math.min(p.w,p.h)*0.15;
+  ctx.shadowOffsetX=Math.min(p.w,p.h)*0.06;
+  ctx.shadowOffsetY=Math.min(p.w,p.h)*0.06;
+
+  jigsawPath(p.x,p.y,p.w,p.h,p.edges);
+  ctx.clip();
+
   const tw=img.width*r, th=img.height*r, bx=(W-tw)/2, by=(H-th)/2;
   ctx.drawImage(img, bx, by, tw, th, bx+p.c*p.w, by+p.r*p.h, p.w, p.h);
   ctx.restore();
-  ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
-}
-function draw(){
-  drawBackground();
-  ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle="rgba(255,255,255,.15)";
-  for(const s of slots) ctx.strokeRect(s.x,s.y,s.w,s.h); ctx.restore();
-  for(const p of pieces){ if(p!==dragging) drawPiece(p); }
-  if(dragging) drawPiece(dragging);
+
+  // TEBI PUTIH berkilat (stroke luar)
+  ctx.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06);
+  ctx.strokeStyle="rgba(255,255,255,.95)";
+  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
+
+  // KONTOUR gelap nipis (bagi timbul)
+  ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)";
+  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
+
+  // HIGHLIGHT lembut di atas-kiri & SHADOW di bawah-kanan (emboss)
+  const grad1=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
+  grad1.addColorStop(0,"rgba(255,255,255,.28)");
+  grad1.addColorStop(.5,"rgba(255,255,255,0)");
+  ctx.fillStyle=grad1; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
+
+  const grad2=ctx.createLinearGradient(p.x,p.y,p.x+p.w,p.y+p.h);
+  grad2.addColorStop(.5,"rgba(0,0,0,0)");
+  grad2.addColorStop(1,"rgba(0,0,0,.18)");
+  ctx.fillStyle=grad2; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
 }
 
-/* drag & touch */
+function draw(){
+  drawBackground();
+  for(const p of pieces){ if(p!==dragging) drawPiece3D(p); }
+  if(dragging) drawPiece3D(dragging);
+}
+
+/* ===== Interaksi ===== */
 function pick(px,py){ for(let i=pieces.length-1;i>=0;i--){ const p=pieces[i]; jigsawPath(p.x,p.y,p.w,p.h,p.edges); if(ctx.isPointInPath(px,py)) return p; } return null;}
 function down(e){ const r=board.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; const p=pick(x,y); if(p){dragging=p; offX=x-p.x; offY=y-p.y;} }
 function move(e){ if(!dragging) return; const r=board.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; dragging.x=x-offX; dragging.y=y-offY; draw(); }
-function up(){ if(!dragging) return; const p=dragging; const s=slots[p.r*cols+p.c]; const near=Math.hypot(p.x-s.x,p.y-s.y) < Math.min(p.w,p.h)*.35; if(near){p.x=s.x; p.y=s.y; p.placed=true;} dragging=null; draw(); checkWin(); }
+function up(){
+  if(!dragging) return;
+  const p=dragging; const s=slots[p.r*cols+p.c];
+  const tol = Math.min(p.w,p.h)*(strongMagnet?0.45:0.28);
+  const near = Math.hypot(p.x-s.x,p.y-s.y) < tol;
+  if(near){ p.x=s.x; p.y=s.y; p.placed=true; }
+  dragging=null; draw(); checkWin();
+}
 board.addEventListener("mousedown",down); addEventListener("mousemove",move); addEventListener("mouseup",up);
 board.addEventListener("touchstart",down,{passive:true}); board.addEventListener("touchmove",move,{passive:true}); board.addEventListener("touchend",up);
 
-/* win */
+/* ===== Win ===== */
 function checkWin(){
   if(pieces.length && pieces.every(p=>p.placed)){
     $("#win").style.display="flex";
@@ -226,15 +274,17 @@ function checkWin(){
 }
 $("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(); };
 
-/* shuffle */
+/* ===== Shuffle ===== */
 function shuffle(){ for(const p of pieces){ p.placed=false; p.x=Math.random()*(W-p.w); p.y=Math.random()*(H-p.h);} draw(); }
 $("#shuffleBtn").onclick=shuffle;
 
-/* start */
+/* ===== Start & Fullscreen ===== */
 $("#startBtn").onclick=()=>{ if(!img){toast("Muat naik gambar dahulu."); return;} setGrid(+$("#piecesSel").value); buildPuzzle(); toast(`Puzzle ${rows*cols} keping disediakan.`); };
 
-/* ====== Skrin penuh untuk STAGE sahaja ====== */
-$("#fullBtn").onclick=()=>{ if(!document.fullscreenElement){ stageEl.requestFullscreen?.(); } else { document.exitFullscreen?.(); } };
+function isFS(){return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement);}
+function enterFS(el){(el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen)?.call(el);}
+function exitFS(){(document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen)?.call(document);}
+$("#fullBtn").onclick=()=>{ if(!isFS()) enterFS(stageEl); else exitFS(); };
 
 function init(){ resizeCanvas(); }
 init();
