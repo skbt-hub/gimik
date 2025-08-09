@@ -181,7 +181,7 @@ function buildPuzzle(){
     const bottom=(r==rows-1)?0: tabsV[r][c];
     const slot={r,c,x:ox+c*pw,y:oy+r*ph,w:pw,h:ph}; slots.push(slot);
 
-    // tabur kepingan (ala game room)
+    // tabur kepingan
     const px = Math.random()*(W-pw);
     const py = Math.random()*(H-ph);
     const piece={r,c,x:px,y:py,w:pw,h:ph,placed:false,edges:{top,bottom,left,right}};
@@ -217,16 +217,21 @@ function jigsawPath(x,y,w,h,e){
 function drawPiece3D(p){
   if(!img) return;
   const r=scale;
+  const tw=img.width*r, th=img.height*r;
+  const bx=(W-tw)/2, by=(H-th)/2;
+
   // Bayang
   ctx.save();
   ctx.shadowColor="rgba(0,0,0,.35)";
   ctx.shadowBlur=Math.min(p.w,p.h)*0.15;
   ctx.shadowOffsetX=Math.min(p.w,p.h)*0.06;
   ctx.shadowOffsetY=Math.min(p.w,p.h)*0.06;
-  jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.clip();
 
-  const tw=img.width*r, th=img.height*r, bx=(W-tw)/2, by=(H-th)/2;
-  ctx.drawImage(img, bx, by, tw, th, bx+p.c*p.w, by+p.r*p.h, p.w, p.h);
+  // KLIP bentuk kepingan dahulu, kemudian lukis keseluruhan imej berskala di papan.
+  // Inilah pembaikan penting: pastikan imej mengisi lekuk juga.
+  jigsawPath(p.x,p.y,p.w,p.h,p.edges);
+  ctx.clip();
+  ctx.drawImage(img, bx, by, tw, th);
   ctx.restore();
 
   // Tepi putih & kontur
