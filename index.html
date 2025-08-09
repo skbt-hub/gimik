@@ -38,7 +38,7 @@
   .stage:fullscreen,.stage:-webkit-full-screen,.stage:-ms-fullscreen{
     width:100vw!important;height:100vh!important;border:none!important;border-radius:0!important
   }
-  /* Pseudo-fullscreen fallback (untuk iPad/Safari degil) */
+  /* Pseudo-fullscreen fallback (iPad/Safari) */
   body.fs .stage{
     position:fixed!important; inset:0!important; width:100vw!important; height:100dvh!important;
     border:none!important; border-radius:0!important; z-index:9999!important;
@@ -168,7 +168,7 @@ function buildPuzzle(){
   scale=tW/img.width; const ox=(W-tW)/2, oy=(H-tH)/2;
   const pw=tW/cols, ph=tH/rows;
 
-  // bentuk tab
+  // bentuk tab (random)
   const tabsH=Array.from({length:rows},()=>Array(cols-1).fill(0));
   const tabsV=Array.from({length:rows-1},()=>Array(cols).fill(0));
   for(let r=0;r<rows;r++)for(let c=0;c<cols-1;c++) tabsH[r][c]=Math.random()>.5?1:-1;
@@ -181,7 +181,7 @@ function buildPuzzle(){
     const bottom=(r==rows-1)?0: tabsV[r][c];
     const slot={r,c,x:ox+c*pw,y:oy+r*ph,w:pw,h:ph}; slots.push(slot);
 
-    // tabur kepingan
+    // tabur kepingan rawak
     const px = Math.random()*(W-pw);
     const py = Math.random()*(H-ph);
     const piece={r,c,x:px,y:py,w:pw,h:ph,placed:false,edges:{top,bottom,left,right}};
@@ -214,32 +214,30 @@ function jigsawPath(x,y,w,h,e){
   ctx.quadraticCurveTo(x,y,x+k,y); ctx.closePath();
 }
 
+/* >>>> Kepingan sentiasa ada gambar (slicing ikut grid) <<<< */
 function drawPiece3D(p){
   if(!img) return;
-  const r=scale;
-  const tw=img.width*r, th=img.height*r;
-  const bx=(W-tw)/2, by=(H-th)/2;
 
-  // Bayang
+  // 1) Klip bentuk
   ctx.save();
-  ctx.shadowColor="rgba(0,0,0,.35)";
-  ctx.shadowBlur=Math.min(p.w,p.h)*0.15;
-  ctx.shadowOffsetX=Math.min(p.w,p.h)*0.06;
-  ctx.shadowOffsetY=Math.min(p.w,p.h)*0.06;
-
-  // KLIP bentuk kepingan dahulu, kemudian lukis keseluruhan imej berskala di papan.
-  // Inilah pembaikan penting: pastikan imej mengisi lekuk juga.
-  jigsawPath(p.x,p.y,p.w,p.h,p.edges);
+  jigsawPath(p.x, p.y, p.w, p.h, p.edges);
   ctx.clip();
-  ctx.drawImage(img, bx, by, tw, th);
+
+  // 2) Lukis bahagian imej milik kepingan (sumber = grid dalam imej asal)
+  const sW = img.width  / cols;
+  const sH = img.height / rows;
+  const sx = p.c * sW;
+  const sy = p.r * sH;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, sx, sy, sW, sH, p.x, p.y, p.w, p.h);
+
   ctx.restore();
 
-  // Tepi putih & kontur
+  // 3) Bingkai & efek 3D
   ctx.lineWidth=Math.max(2,Math.min(p.w,p.h)*0.06);
   ctx.strokeStyle="rgba(255,255,255,.95)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
   ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)"; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.stroke();
 
-  // Highlight lembut
   const g1=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
   g1.addColorStop(0,"rgba(255,255,255,.28)"); g1.addColorStop(.5,"rgba(255,255,255,0)");
   ctx.fillStyle=g1; jigsawPath(p.x,p.y,p.w,p.h,p.edges); ctx.fill();
