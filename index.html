@@ -1,30 +1,390 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puzzle Merdeka</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puzzle Maker Merdeka</title>
+<style>
+  :root{
+    --bg:#0a2540; --panel:#103d68; --accent:#ffd34d; --text:#eef6ff; --muted:#b8d3f0;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid #0b2846;position:sticky;top:0;z-index:3}
+  .brand{display:flex;gap:10px;align-items:center}
+  .brand h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .btn,.select,.file{background:#0f3359;color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+  .btn:hover{background:#134674}
+  .select{appearance:none}
+  input[type=file]{border:none}
+  main{display:grid;grid-template-columns:300px 1fr;gap:12px;padding:12px}
+  @media (max-width:900px){ main{grid-template-columns:1fr} }
+  .side{background:var(--panel);border:1px solid #0b2846;border-radius:14px;padding:12px;min-height:120px}
+  .side h2{font-size:14px;margin:0 0 8px 0;color:var(--muted)}
+  .tray{display:flex;flex-wrap:wrap;gap:8px;min-height:120px}
+  .badge{background:#0f3359;border:1px dashed #1a4d82;border-radius:8px;padding:6px 8px;font-size:12px;color:var(--muted)}
+  .stage{position:relative;background:#0e2d52;border:2px solid #0b2846;border-radius:14px;min-height:60vh;touch-action:none;overflow:hidden}
+  canvas{position:absolute;inset:0}
+  footer{padding:10px 14px;color:var(--muted);font-size:12px}
+  .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:var(--text);padding:8px 12px;border:1px solid #1a4d82;border-radius:10px;display:none;z-index:5}
+  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center}
+  .overlay h3{margin:0;font-size:22px;color:#fff}
+  .overlay p{margin:0;color:#fff}
+  .overlay .btn{background:var(--accent);color:#222;border-color:#c7a52d}
+  .tag{background:var(--accent);color:#1e1e1e;border-radius:999px;padding:4px 10px;font-weight:700}
+</style>
 </head>
 <body>
+<header>
+  <div class="brand">
+    <span class="tag">Puzzle Maker</span>
+    <h1>Selamat Menyambut Bulan Kebangsaan ke-68</h1>
+  </div>
+  <div class="controls">
+    <label class="file">Gambar: <input id="imgInput" type="file" accept="image/*"></label>
+    <label class="file">MP3: <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3"></label>
+    <select id="piecesSel" class="select" title="Bilangan kepingan">
+      <option value="6">6 keping (2×3)</option>
+      <option value="8">8 keping (2×4)</option>
+      <option value="12" selected>12 keping (3×4)</option>
+      <option value="14">14 keping (2×7)</option>
+      <option value="16">16 keping (4×4)</option>
+      <option value="18">18 keping (3×6)</option>
+      <option value="20">20 keping (4×5)</option>
+    </select>
+    <button id="startBtn" class="btn">Mula Puzzle</button>
+    <button id="shuffleBtn" class="btn">Kacau</button>
+    <button id="audioArmBtn" class="btn">Bunyi: SEDIAKAN</button>
+    <button id="fullBtn" class="btn">Skrin Penuh</button>
+  </div>
+</header>
 
-    <header>
-        <h1>Selamat Menyambut Bulan Kebangsaan ke-68</h1>
-    </header>
-
-    <section class="upload">
-        <input type="file" id="imageUpload" accept="image/*">
-        <input type="file" id="audioUpload" accept="audio/mp3">
-    </section>
-
-    <div id="puzzle-container"></div>
-
-    <div id="congrats-message" class="hidden">
-        <p>Tahniah, Anda Berjaya!</p>
-        <audio id="audioPlayer"></audio>
+<main>
+  <section class="side">
+    <h2>Palet Kepingan</h2>
+    <div class="tray" id="tray"><span class="badge">Muat naik gambar dan tekan “Mula Puzzle”.</span></div>
+  </section>
+  <section class="stage">
+    <canvas id="board"></canvas>
+    <div id="win" class="overlay">
+      <h3>TAHNIAH ANDA BERJAYA!</h3>
+      <p>SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
+      <div>
+        <button class="btn" id="againBtn">Main Lagi</button>
+      </div>
     </div>
+  </section>
+</main>
 
-    <script src="script.js"></script>
+<div class="toast" id="toast"></div>
+<footer>Tip: iPad perlu satu sentuhan pada butang <b>Bunyi: SEDIAKAN</b> untuk membenarkan audio dimainkan apabila puzzle siap.</footer>
+
+<script>
+/* ========= Util UI ========= */
+const $ = s=>document.querySelector(s);
+const toast = (msg)=>{ const t=$("#toast"); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2200); };
+$("#fullBtn").onclick=()=>{ const el=document.documentElement; if(!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.(); };
+
+/* ========= Layout & Canvas ========= */
+const board = $("#board");
+const stage = board.parentElement;
+const ctx = board.getContext("2d");
+let W,H,scale=1;
+const DPR = Math.max(1, window.devicePixelRatio||1);
+function resizeCanvas(){
+  const pad = 16;
+  W = Math.floor(stage.clientWidth - pad);
+  H = Math.floor(Math.max(420, stage.clientHeight - pad));
+  board.style.left = (pad/2)+"px";
+  board.style.top  = (pad/2)+"px";
+  board.style.width = W+"px";
+  board.style.height= H+"px";
+  board.width  = Math.floor(W*DPR);
+  board.height = Math.floor(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  draw();
+}
+window.addEventListener("resize", resizeCanvas);
+
+/* ========= Puzzle Model ========= */
+let img=null, mp3=null, audio=new Audio();
+let rows=3, cols=4;           // default 12
+let pieces=[], slots=[], dragging=null, offsetX=0, offsetY=0;
+const mapping = {6:[2,3],8:[2,4],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,5]};
+
+function setGrid(n){
+  const m = mapping[n]; rows=m[0]; cols=m[1];
+}
+
+$("#piecesSel").onchange = e=> setGrid(+e.target.value);
+
+$("#imgInput").addEventListener("change", e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    img=new Image();
+    img.onload=()=>{ toast("Gambar dimuat naik."); draw(); };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(f);
+});
+
+$("#mp3Input").addEventListener("change", e=>{
+  mp3 = e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null;
+  if(mp3) { audio.src = mp3; toast("MP3 dimuat naik."); }
+});
+
+$("#audioArmBtn").onclick=async ()=>{
+  try{
+    if(!mp3) { toast("Muat naik MP3 dahulu."); return; }
+    audio.src = mp3;
+    await audio.play(); await new Promise(r=>setTimeout(r,150)); audio.pause(); audio.currentTime=0;
+    toast("Audio sedia dimainkan apabila puzzle siap.");
+  }catch{ toast("iPad memerlukan sentuhan. Cuba lagi."); }
+};
+
+/* ========= Jigsaw Shape Generator =========
+   Setiap sambungan (atas/kanan/bawah/kiri) boleh 'tab' (1), 'blank' (-1), atau 0 di tepi.
+*/
+function buildPuzzle(){
+  if(!img){ toast("Sila muat naik gambar."); return; }
+  pieces=[]; slots=[];
+  // kira saiz imej padan dengan papan (fit contain)
+  const margin=20;
+  const boxW=W - margin*2, boxH=H - margin*2;
+  const rImg = img.width/img.height;
+  const rBox = boxW/boxH;
+  let targetW, targetH;
+  if(rImg > rBox){ targetW=boxW; targetH=boxW/rImg; } else { targetH=boxH; targetW=boxH*rImg; }
+  scale = targetW/img.width;
+  const ox = (W-targetW)/2, oy=(H-targetH)/2;
+  const pw = targetW/cols, ph=targetH/rows;
+
+  // bentuk tab utk setiap grid
+  const tabsH = Array.from({length:rows},()=>Array(cols-1).fill(0));
+  const tabsV = Array.from({length:rows-1},()=>Array(cols).fill(0));
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols-1;c++){
+      tabsH[r][c] = Math.random()>.5?1:-1; // kanan kiri pasangan
+    }
+  }
+  for(let r=0;r<rows-1;r++){
+    for(let c=0;c<cols;c++){
+      tabsV[r][c] = Math.random()>.5?1:-1; // atas bawah pasangan
+    }
+  }
+
+  // bina slot dan keping
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const left   = (c==0)?0: -tabsH[r][c-1];
+      const right  = (c==cols-1)?0: tabsH[r][c];
+      const top    = (r==0)?0: -tabsV[r-1][c];
+      const bottom = (r==rows-1)?0: tabsV[r][c];
+
+      const slot = {
+        r,c,x:ox + c*pw, y:oy + r*ph, w:pw, h:ph
+      };
+      slots.push(slot);
+
+      const piece = {
+        r,c,x: Math.random()*(W-pw), y: Math.random()*(H-ph),
+        w:pw, h:ph, placed:false,
+        edges:{top,bottom,left,right}
+      };
+      pieces.push(piece);
+    }
+  }
+
+  // sediakan palet tray
+  const tray = $("#tray"); tray.innerHTML="";
+  tray.appendChild(Object.assign(document.createElement('span'),{className:'badge',textContent:'Seret kepingan ke papan & padankan.'}));
+  draw();
+}
+
+function drawBackground(){
+  ctx.clearRect(0,0,W,H);
+  // grid bayang slot (untuk panduan)
+  if(img){
+    // lukis imej kabur tipis sebagai bayang lokasi
+    ctx.globalAlpha=0.15;
+    const r=scale;
+    const tw=img.width*r, th=img.height*r;
+    const x=(W-tw)/2, y=(H-th)/2;
+    ctx.drawImage(img, x, y, tw, th);
+    ctx.globalAlpha=1;
+  }
+}
+
+function jigsawPath(x,y,w,h,edges){
+  const tabSize = Math.min(w,h)*0.18;
+  const k = Math.min(w,h)*0.12;
+  ctx.beginPath();
+  // start top-left
+  ctx.moveTo(x+k, y);
+
+  // TOP edge
+  if(edges.top===0){ ctx.lineTo(x+w-k, y); }
+  else{
+    const dir = edges.top; // 1 tab keluar, -1 masuk
+    ctx.lineTo(x+w*0.35, y);
+    ctx.bezierCurveTo(x+w*0.35, y - dir*tabSize, x+w*0.65, y - dir*tabSize, x+w*0.65, y);
+    ctx.lineTo(x+w-k, y);
+  }
+
+  // top-right corner
+  ctx.quadraticCurveTo(x+w, y, x+w, y+k);
+
+  // RIGHT edge
+  if(edges.right===0){ ctx.lineTo(x+w, y+h-k); }
+  else{
+    const dir = edges.right;
+    ctx.lineTo(x+w, y+h*0.35);
+    ctx.bezierCurveTo(x+w+dir*tabSize, y+h*0.35, x+w+dir*tabSize, y+h*0.65, x+w, y+h*0.65);
+    ctx.lineTo(x+w, y+h-k);
+  }
+
+  // bottom-right
+  ctx.quadraticCurveTo(x+w, y+h, x+w-k, y+h);
+
+  // BOTTOM edge
+  if(edges.bottom===0){ ctx.lineTo(x+k, y+h); }
+  else{
+    const dir = edges.bottom;
+    ctx.lineTo(x+w*0.65, y+h);
+    ctx.bezierCurveTo(x+w*0.65, y+h+dir*tabSize, x+w*0.35, y+h+dir*tabSize, x+w*0.35, y+h);
+    ctx.lineTo(x+k, y+h);
+  }
+
+  // bottom-left
+  ctx.quadraticCurveTo(x, y+h, x, y+h-k);
+
+  // LEFT edge
+  if(edges.left===0){ ctx.lineTo(x, y+k); }
+  else{
+    const dir = edges.left;
+    ctx.lineTo(x, y+h*0.65);
+    ctx.bezierCurveTo(x-dir*tabSize, y+h*0.65, x-dir*tabSize, y+h*0.35, x, y+h*0.35);
+    ctx.lineTo(x, y+k);
+  }
+
+  // top-left
+  ctx.quadraticCurveTo(x, y, x+k, y);
+  ctx.closePath();
+}
+
+function drawPiece(p){
+  // klip bentuk jigsaw dan lukis potongan imej
+  if(!img){ return; }
+  const r=scale, sx=p.c*p.w/r, sy=p.r*p.h/r;
+  ctx.save();
+  jigsawPath(p.x, p.y, p.w, p.h, p.edges);
+  ctx.clip();
+  const tw=img.width*r, th=img.height*r;
+  const x=(W-tw)/2, y=(H-th)/2;
+  ctx.drawImage(img, x, y, tw, th, x + p.c*p.w, y + p.r*p.h, p.w, p.h);
+  ctx.restore();
+
+  // kontur
+  ctx.lineWidth=1.2; ctx.strokeStyle="rgba(0,0,0,.35)";
+  jigsawPath(p.x, p.y, p.w, p.h, p.edges);
+  ctx.stroke();
+}
+
+function draw(){
+  resizeCanvas; // no-op, just keep ref
+  drawBackground();
+  // slot highlight (optional)
+  ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle="rgba(255,255,255,.15)";
+  for(const s of slots){ ctx.strokeRect(s.x, s.y, s.w, s.h); }
+  ctx.restore();
+
+  // pieces—pastikan yang sedang seret dilukis terakhir
+  for(const p of pieces){ if(p!==dragging) drawPiece(p); }
+  if(dragging) drawPiece(dragging);
+}
+
+/* ========= Interaksi Drag ========= */
+function pickPiece(px,py){
+  for(let i=pieces.length-1;i>=0;i--){
+    const p=pieces[i];
+    jigsawPath(p.x,p.y,p.w,p.h,p.edges);
+    if(ctx.isPointInPath(px,py)){ return p; }
+  }
+  return null;
+}
+
+function pointerDown(e){
+  const rect=board.getBoundingClientRect();
+  const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+  const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+  const p=pickPiece(x,y);
+  if(p){ dragging=p; offsetX=x-p.x; offsetY=y-p.y; board.setPointerCapture?.(e.pointerId||0); }
+}
+function pointerMove(e){
+  if(!dragging) return;
+  const rect=board.getBoundingClientRect();
+  const x=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+  const y=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+  dragging.x=x-offsetX; dragging.y=y-offsetY;
+  draw();
+}
+function pointerUp(){
+  if(!dragging) return;
+  // snap ke slot yang betul jika hampir
+  const p=dragging; const slot = slots[p.r*cols + p.c];
+  const dx = p.x - slot.x, dy = p.y - slot.y;
+  const snap = Math.hypot(dx,dy) < Math.min(p.w,p.h)*0.35;
+  if(snap){ p.x=slot.x; p.y=slot.y; p.placed=true; }
+  dragging=null;
+  draw();
+  checkWin();
+}
+
+board.addEventListener("mousedown",pointerDown);
+board.addEventListener("mousemove",pointerMove);
+window.addEventListener("mouseup",pointerUp);
+board.addEventListener("touchstart",pointerDown,{passive:true});
+board.addEventListener("touchmove",pointerMove,{passive:true});
+board.addEventListener("touchend",pointerUp);
+
+/* ========= Menang ========= */
+function checkWin(){
+  if(pieces.length && pieces.every(p=>p.placed)){
+    $("#win").style.display="flex";
+    if(audio && mp3){
+      audio.currentTime=0;
+      audio.play().catch(()=>{/* ignore iOS block if not armed */});
+    }
+  }
+}
+$("#againBtn").onclick=()=>{
+  $("#win").style.display="none";
+  shufflePieces();
+};
+
+/* ========= Shuffle ========= */
+function shufflePieces(){
+  for(const p of pieces){
+    p.placed=false;
+    p.x = Math.random()*(W - p.w);
+    p.y = Math.random()*(H - p.h);
+  }
+  draw();
+}
+$("#shuffleBtn").onclick=()=>{ shufflePieces(); };
+
+/* ========= Mula ========= */
+$("#startBtn").onclick=()=>{
+  if(!img){ toast("Muat naik gambar dahulu."); return; }
+  setGrid(+$("#piecesSel").value);
+  buildPuzzle();
+  draw();
+  toast(`Puzzle ${rows*cols} keping disediakan.`);
+};
+
+resizeCanvas();
+/* end */
+</script>
 </body>
 </html>
