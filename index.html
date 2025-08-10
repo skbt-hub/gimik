@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Auto Snap & Auto Music (FIX r,c)</title>
+<title>Puzzle Malaysia — Auto Music + Fullscreen Pause</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
@@ -36,7 +36,6 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 .actions{display:flex;gap:10px;margin-top:16px}
 .actions .btn{background:#ffd34d;color:#1e2125;border-color:#c9a43c;font-weight:700}
 .small{opacity:.85}
-.status{font-size:12px;opacity:.9}
 </style>
 </head>
 <body>
@@ -63,13 +62,6 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
     </label>
     <span id="mp3Name" class="small"></span>
     <div class="range">Vol Muzik <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
-
-    <!-- SFX Snap -->
-    <label class="file">Bunyi Snap
-      <input id="sfxInput" type="file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/ogg,audio/*">
-    </label>
-    <span id="sfxName" class="status"></span>
-    <div class="range">Vol Snap <input id="sfxVol" type="range" min="0" max="1" step="0.05" value="0.9"></div>
   </div>
 </header>
 
@@ -94,11 +86,10 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Auto: bunyi snap bila tepat (ikut slot r,c) & lagu kemenangan bila gambar besar muncul.</footer>
+<footer>Muzik auto main bila menang. Bila tutup skrin penuh, muzik berhenti automatik.</footer>
 
 <!-- Audio tersembunyi -->
 <audio id="bgm" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
-<audio id="sfxEl" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
 
 <script>
 /* ===== util ===== */
@@ -129,7 +120,6 @@ let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
 let dragging=null, offX=0, offY=0;
 let showPreview=false, built=false;
 let trayW=0, margin=14, gutter=10;
-const GRID_GAP=0;
 
 /* ===== Muzik kemenangan ===== */
 const bgm=$("#bgm"); let mp3URL=null;
@@ -142,43 +132,6 @@ $("#mp3Input").addEventListener("change", e=>{
   bgm.src = mp3URL; bgm.load(); bgm.loop=true;
   $("#mp3Name").textContent = "• " + f.name;
   toast("Muzik kemenangan dimuat naik.");
-});
-
-/* ===== SFX Snap (WebAudio + fallback, dengan cooldown) ===== */
-let audioCtx=null, snapBuffer=null, sfxVol=0.9;
-let sfxMode='default'; let sfxURL=null; const sfxEl=$("#sfxEl");
-let lastSnapAt=0;
-function ensureAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
-function resumeCtx(){ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }
-function makeDefaultSnapBuffer(){ ensureAudioCtx(); const dur=0.10, rate=audioCtx.sampleRate, len=Math.floor(dur*rate);
-  const buf=audioCtx.createBuffer(1,len,rate), data=buf.getChannelData(0);
-  for(let i=0;i<len;i++){ const t=i/len; data[i]=(Math.random()*2-1)*Math.pow(1-t,5)*0.7; } return buf; }
-function playSnap(){
-  const now=(performance&&performance.now)?performance.now():Date.now();
-  if(now-lastSnapAt<120) return; lastSnapAt=now; // cooldown 120ms
-
-  if(sfxMode==='buffer' && snapBuffer && audioCtx){
-    resumeCtx(); const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
-    const g=audioCtx.createGain(); g.gain.value=sfxVol; src.connect(g).connect(audioCtx.destination); src.start(); return;
-  }
-  if(sfxMode==='element' && sfxURL){ const a=new Audio(sfxURL); a.volume=sfxVol; a.play().catch(()=>{}); return; }
-  ensureAudioCtx(); resumeCtx(); if(!snapBuffer) snapBuffer=makeDefaultSnapBuffer();
-  const src=audioCtx.createBufferSource(); src.buffer=snapBuffer; const g=audioCtx.createGain(); g.gain.value=sfxVol;
-  src.connect(g).connect(audioCtx.destination); src.start(); sfxMode='default';
-}
-$("#sfxVol").addEventListener("input",e=>{ sfxVol=+e.target.value; sfxEl.volume=sfxVol; });
-$("#sfxInput").addEventListener("change",async e=>{
-  const f=e.target.files?.[0]; if(!f){ $("#sfxName").textContent=""; sfxMode='default'; return; }
-  $("#sfxName").textContent="• Memuat SFX…";
-  try{
-    if(sfxURL) URL.revokeObjectURL(sfxURL);
-    sfxURL = URL.createObjectURL(f); sfxEl.src=sfxURL; sfxEl.load(); sfxEl.volume=sfxVol;
-    ensureAudioCtx(); const arr=await f.arrayBuffer(); const buf=await audioCtx.decodeAudioData(arr);
-    snapBuffer=buf; sfxMode='buffer'; $("#sfxName").textContent="• Bunyi snap siap (WebAudio)"; toast("SFX snap dimuat.");
-  }catch(err){
-    console.warn('Decode SFX gagal → fallback', err);
-    snapBuffer=null; sfxMode='element'; $("#sfxName").textContent="• Bunyi snap siap (Fallback)"; toast("SFX guna fallback.");
-  }
 });
 
 /* ===== controls ===== */
@@ -202,11 +155,17 @@ $("#fsBtn").addEventListener("click",()=>{
     else{ (document.exitFullscreen||document.webkitExitFullscreen).call(document); $("#fsBtn").textContent="Skrin Penuh"; }
   }catch(e){}
 });
-document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh");
+document.addEventListener("fullscreenchange",()=>{
+  const inFS = !!isFS();
+  $("#fsBtn").textContent = inFS ? "Keluar Skrin Penuh" : "Skrin Penuh";
+  // Jika keluar dari skrin penuh, berhenti muzik automatik
+  if(!inFS && !bgm.paused){
+    try{ bgm.pause(); bgm.currentTime = 0; }catch(_){}
+  }
+});
 
 /* ===== helper ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
-function isCorrectTarget(piece, targetCell){ return !!targetCell && piece.r===targetCell.r && piece.c===targetCell.c; }
 
 /* ===== bina puzzle (grid besar + tray kiri/kanan) ===== */
 function buildPuzzle(){
@@ -288,11 +247,11 @@ function draw(){
   drawTray(Math.round(W-margin-trayW),Math.round(margin),Math.round(trayW),H-margin*2);
 
   ctx.save(); ctx.fillStyle='#061a2e'; ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.rect(OX-8||0, OY-8||0, (GRID_W||0)+16, (GRID_H||0)+16); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.rect(OX-8||0, OY-8||0, (CELL*cols||0)+16, (CELL*rows||0)+16); ctx.fill(); ctx.stroke(); ctx.restore();
 
-  if(showPreview && img && GRID_W>0 && GRID_H>0){
+  if(showPreview && img && CELL>0){
     ctx.save(); ctx.globalAlpha=0.28;
-    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, GRID_W,GRID_H);
+    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, CELL*cols, CELL*rows);
     ctx.restore();
   }
   for(const p of pieces){ if(p===dragging || p.placed) continue; drawPiece(p,true); }
@@ -316,7 +275,7 @@ function drawPiece(p,floating,lift){
   }
 }
 
-/* ===== DnD + snap ===== */
+/* ===== DnD + snap (snap sahaja, tiada bunyi) ===== */
 function pieceAt(px,py){
   for(let i=pieces.length-1;i>=0;i--){
     const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
@@ -326,7 +285,6 @@ function pieceAt(px,py){
 board.addEventListener("pointerdown",e=>{
   e.preventDefault();
   try{ board.setPointerCapture(e.pointerId); }catch(_){}
-  try{ ensureAudioCtx(); resumeCtx(); }catch(_){}
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   const p=pieceAt(x,y); if(!p) return;
   dragging=p; offX=x-p.at.x; offY=y-p.at.y;
@@ -347,18 +305,13 @@ board.addEventListener("pointerup",e=>{
   const snap = findNearestTarget(p.at.x + p.w/2, p.at.y + p.h/2);
   if(snap && !occupied(snap.r, snap.c)){
     p.at.x = snap.x; p.at.y = snap.y;
-
-    const wasPlaced = !!p.placed;
-    p.placed = isCorrectTarget(p, snap);   // semak ikut (r,c)
-
-    if(!wasPlaced && p.placed){            // hanya bila baru jadi betul
-      playSnap();
-    }
+    p.placed = (p.r === snap.r && p.c === snap.c);
   }
   draw(); checkWin();
 },{passive:false});
 
 function findNearestTarget(cx,cy){
+  const GRID_W = CELL*cols, GRID_H = CELL*rows;
   if(GRID_W<=0 || GRID_H<=0) return null;
   if(cx>=OX && cx<=OX+GRID_W && cy>=OY && cy<=OY+GRID_H){
     const c=Math.floor((cx-OX)/CELL), r=Math.floor((cy-OY)/CELL);
