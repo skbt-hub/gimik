@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Auto MP3 & Auto Snap</title>
+<title>Puzzle Malaysia — Auto Snap & Auto Music (FIX)</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
@@ -110,7 +110,8 @@ const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
 /* ===== canvas & layout ===== */
 const stageEl=$("#stage");
-const board=$("#board"), ctx=board.getContext("2d",{alpha:false});
+const board=$("#board");
+const ctx=board.getContext("2d",{alpha:false});
 let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
 function resizeCanvas(){
   const pad=10, w=stageEl.clientWidth, h=Math.max(660,stageEl.clientHeight);
@@ -118,15 +119,20 @@ function resizeCanvas(){
   board.style.left=(pad/2)+"px"; board.style.top=(pad/2)+"px";
   board.style.width=W+"px"; board.style.height=H+"px";
   board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0); draw();
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  draw(); // lukis papan kosong/tray
 }
-addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
+window.addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
 
 /* ===== state ===== */
-let img=null, rows=3, cols=4;
-let pieces=[], targets=[];
-let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
-let dragging=null, offX=0, offY=0, showPreview=false, built=false;
+let img=null;              // imej sumber
+let rows=3, cols=4;        // konfigurasi grid
+let pieces=[];             // senarai kepingan
+let targets=[];            // posisi sasaran grid
+let OX=0, OY=0, CELL=0;    // offset grid & saiz sel
+let GRID_W=0, GRID_H=0;    // dimensi grid
+let dragging=null, offX=0, offY=0;
+let showPreview=false, built=false;
 let trayW=0, margin=14, gutter=10;
 const GRID_GAP=0;
 
@@ -150,7 +156,6 @@ let audioCtx=null, snapBuffer=null, sfxVol=0.9;
 let sfxMode='default'; // 'buffer' | 'element' | 'default'
 let sfxURL=null;
 const sfxEl=$("#sfxEl");
-
 function ensureAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
 function resumeCtx(){ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }
 function makeDefaultSnapBuffer(){
@@ -162,7 +167,7 @@ function makeDefaultSnapBuffer(){
   return buf;
 }
 function playSnap(){
-  // cuba main melalui WebAudio dulu
+  // cuba WebAudio dahulu
   if(sfxMode==='buffer' && snapBuffer && audioCtx){
     resumeCtx();
     const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
@@ -170,35 +175,34 @@ function playSnap(){
     src.connect(g).connect(audioCtx.destination); src.start();
     return;
   }
-  // fallback elemen <audio>
+  // fallback <audio>
   if(sfxMode==='element' && sfxURL){
     const a=new Audio(sfxURL); a.volume=sfxVol; a.play().catch(()=>{});
     return;
   }
-  // default noise kalau tiada fail
+  // default noise
   ensureAudioCtx(); resumeCtx();
-  if(!snapBuffer) snapBuffer = makeDefaultSnapBuffer();
+  if(!snapBuffer) snapBuffer=makeDefaultSnapBuffer();
   const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
   const g=audioCtx.createGain(); g.gain.value=sfxVol;
   src.connect(g).connect(audioCtx.destination); src.start();
   sfxMode='default';
 }
 $("#sfxVol").addEventListener("input",e=>{ sfxVol=+e.target.value; sfxEl.volume=sfxVol; });
-
 $("#sfxInput").addEventListener("change",async (e)=>{
   const f=e.target.files?.[0]; if(!f){ $("#sfxName").textContent=""; sfxMode='default'; return; }
   $("#sfxName").textContent="• Memuat SFX…";
   try{
-    // URL untuk fallback
+    // sediakan URL fallback
     if(sfxURL) URL.revokeObjectURL(sfxURL);
     sfxURL = URL.createObjectURL(f);
-    sfxEl.src = sfxURL; sfxEl.load(); sfxEl.volume=sfxVol;
+    sfxEl.src=sfxURL; sfxEl.load(); sfxEl.volume=sfxVol;
 
-    // Cuba decode ke WebAudio (mp3/wav/ogg)
+    // cuba decode ke WebAudio
     ensureAudioCtx();
-    const arr = await f.arrayBuffer();
-    const buf = await audioCtx.decodeAudioData(arr);
-    snapBuffer = buf; sfxMode='buffer';
+    const arr=await f.arrayBuffer();
+    const buf=await audioCtx.decodeAudioData(arr);
+    snapBuffer=buf; sfxMode='buffer';
     $("#sfxName").textContent="• Bunyi snap siap (WebAudio)";
     toast("SFX snap dimuat (kualiti tinggi).");
   }catch(err){
@@ -210,29 +214,36 @@ $("#sfxInput").addEventListener("change",async (e)=>{
 });
 
 /* ===== controls ===== */
+const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
+$("#piecesSel").addEventListener("change",e=>{
+  const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle();
+});
+$("#previewBtn").addEventListener("click",function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); });
+$("#startBtn").addEventListener("click",()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); });
+$("#shuffleBtn").addEventListener("click",()=>shuffle());
+
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files?.[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{ img=new Image(); img.onload=()=>{ toast("Gambar dimuat naik."); buildPuzzle(); $("#celebrateImg").src=img.src; }; img.src=ev.target.result; };
+  r.onload=ev=>{
+    img=new Image();
+    img.onload=()=>{ $("#celebrateImg").src=img.src; buildPuzzle(); };
+    img.src=ev.target.result;
+  };
   r.readAsDataURL(f);
 });
-const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
-$("#piecesSel").onchange=e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
-$("#previewBtn").onclick=function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); };
-$("#startBtn").onclick=()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); };
-$("#shuffleBtn").onclick=()=>shuffle();
 
 /* ===== fullscreen ===== */
 function isFS(){return document.fullscreenElement||document.webkitFullscreenElement;}
-$("#fsBtn").onclick=()=>{
+$("#fsBtn").addEventListener("click",()=>{
   try{
     if(!isFS()){ const el=stageEl; (el.requestFullscreen||el.webkitRequestFullscreen).call(el); $("#fsBtn").textContent="Keluar Skrin Penuh"; }
     else{ (document.exitFullscreen||document.webkitExitFullscreen).call(document); $("#fsBtn").textContent="Skrin Penuh"; }
   }catch(e){}
-};
+});
 document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh");
 
-/* ===== helper: segi empat tepat ===== */
+/* ===== helper ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
 
 /* ===== bina puzzle (grid besar + tray kiri/kanan) ===== */
@@ -267,24 +278,29 @@ function buildPuzzle(){
   OY = Math.round(margin + (usableH - GRID_H)/2);
 
   const sW = img.width/cols, sH = img.height/rows;
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const tx = OX + c*CELL, ty = OY + r*CELL;
-    const sx = c*sW, sy=r*sH;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const tx = OX + c*CELL;
+      const ty = OY + r*CELL;
+      const sx = c*sW, sy=r*sH;
 
-    const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
-    const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+      const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
+      const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
 
-    rectPath(g,0,0,CELL,CELL); g.clip();
-    g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
+      rectPath(g,0,0,CELL,CELL); g.clip();
+      g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
 
-    pieces.push({r,c,x:tx,y:ty,w:CELL,h:CELL,img:can,at:{x:0,y:0},placed:false});
-    targets.push({x:tx,y:ty,r,c});
+      pieces.push({r,c,x:tx,y:ty,w:CELL,h:CELL,img:can,at:{x:0,y:0},placed:false});
+      targets.push({x:tx,y:ty,r,c});
+    }
   }
   shuffle();
+  draw(); // pastikan kelihatan selepas build
 }
 
 /* ===== letak kepingan di tray kiri/kanan ===== */
 function shuffle(){
+  if(!built || !pieces.length){ draw(); return; }
   const pad=10, gap=8;
   const total=pieces.length, leftCount=Math.ceil(total/2), rightCount=total-leftCount;
   const rmax = Math.max(1, Math.floor((H - margin*2 - pad*2) / (CELL + gap)));
@@ -306,23 +322,32 @@ function shuffle(){
     pieces[idx].at.y = Math.round(margin + pad + r*(CELL+gap));
     pieces[idx].placed=false;
   }
-  draw();
 }
 
 /* ===== lukis papan & kepingan ===== */
 function draw(){
+  // latar
   ctx.fillStyle='#071a2f'; ctx.fillRect(0,0,W,H);
 
+  // tray kiri/kanan
   drawTray(Math.round(margin),Math.round(margin),Math.round(trayW),H-margin*2);
   drawTray(Math.round(W-margin-trayW),Math.round(margin),Math.round(trayW),H-margin*2);
 
+  // grid tengah
   ctx.save(); ctx.fillStyle='#061a2e'; ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.rect(OX-8, OY-8, GRID_W+16, GRID_H+16); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.beginPath(); ctx.rect(OX-8||0, OY-8||0, (GRID_W||0)+16, (GRID_H||0)+16); ctx.fill(); ctx.stroke(); ctx.restore();
 
-  if(showPreview && img){ ctx.save(); ctx.globalAlpha=0.28; ctx.drawImage(img,0,0,img.width,img.height, OX,OY, GRID_W,GRID_H); ctx.restore(); }
+  if(showPreview && img && GRID_W>0 && GRID_H>0){
+    ctx.save(); ctx.globalAlpha=0.28;
+    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, GRID_W,GRID_H);
+    ctx.restore();
+  }
 
+  // kepingan di tray
   for(const p of pieces){ if(p===dragging || p.placed) continue; drawPiece(p,true); }
+  // kepingan drag
   if(dragging) drawPiece(dragging,true,true);
+  // kepingan yang sudah ditempatkan (dilukis terakhir supaya 'di bawah' outline)
   for(const p of pieces){ if(!p.placed || p===dragging) continue; drawPiece(p,false); }
 }
 function drawTray(x,y,w,h){
@@ -346,17 +371,20 @@ function drawPiece(p,floating,lift){
 
 /* ===== DnD + snap ===== */
 function pieceAt(px,py){
-  for(let i=pieces.length-1;i>=0;i--){ const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
-    if(px>=x && px<=x+w && py>=y && py<=y+h) return p; } return null;
+  for(let i=pieces.length-1;i>=0;i--){
+    const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
+    if(px>=x && px<=x+w && py>=y && py<=y+h) return p;
+  } return null;
 }
 board.addEventListener("pointerdown",e=>{
   e.preventDefault();
   try{ board.setPointerCapture(e.pointerId); }catch(_){}
-  // Aktifkan WebAudio upon user gesture (benarkan autoplay seterusnya)
   try{ ensureAudioCtx(); resumeCtx(); }catch(_){}
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.at.x; offY=y-p.at.y;
-  const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]); requestAnimationFrame(draw);
+  const p=pieceAt(x,y); if(!p) return;
+  dragging=p; offX=x-p.at.x; offY=y-p.at.y;
+  const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]);
+  requestAnimationFrame(draw);
 },{passive:false});
 
 board.addEventListener("pointermove",e=>{
@@ -373,48 +401,42 @@ board.addEventListener("pointerup",e=>{
   if(snap && !occupied(snap.r,snap.c)){
     p.at.x=snap.x; p.at.y=snap.y;
     p.placed=(p.x===snap.x && p.y===snap.y);
-    if(p.placed) playSnap(); // Auto bunyi snap bila tepat
+    if(p.placed) playSnap(); // bunyi snap bila tepat
   }
   draw(); checkWin();
 },{passive:false});
 
 function findNearestTarget(cx,cy){
+  if(GRID_W<=0 || GRID_H<=0) return null;
   if(cx>=OX && cx<=OX+GRID_W && cy>=OY && cy<=OY+GRID_H){
     const c=Math.floor((cx-OX)/CELL), r=Math.floor((cy-OY)/CELL);
-    return targets[r*cols+c];
-  } return null;
+    if(r>=0 && r<rows && c>=0 && c<cols) return targets[r*cols+c];
+  }
+  return null;
 }
 function occupied(rr,cc){ return pieces.some(p=>p.placed && p.r===rr && p.c===cc); }
 
 /* ===== MENANG: gambar besar + auto muzik ===== */
 function checkWin(){
   for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; }
-
   $("#celebrateImg").src = img?.src || "";
   $("#celebrate").classList.add("show");
-
-  // Auto mainkan muzik kemenangan
   if(bgm.src){
     try{
       bgm.currentTime=0; bgm.loop=true;
-      // cuba main segera; dibenarkan kerana user telah berinteraksi (drag)
-      const playPromise = bgm.play();
-      if(playPromise && typeof playPromise.then==="function"){
-        playPromise.catch(()=>{/* jika pelayar sekat, abaikan diam² */});
-      }
+      const pr=bgm.play();
+      if(pr && typeof pr.then==="function"){ pr.catch(()=>{}); }
     }catch(_){}
   }
 }
 
 /* ===== semula ===== */
-$("#againBtn").onclick=()=>{ $("#celebrate").classList.remove("show"); shuffle(); };
+$("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); shuffle(); draw(); });
 
-/* ===== init ===== */
-resizeCanvas();
+/* ===== mula ===== */
+resizeCanvas(); // sediakan kanvas
+// Jika nak papar grid kosong walaupun belum ada gambar, boleh letak img placeholder.
 
-/* ===== data struktur ===== */
-let GRID_W=0, GRID_H=0, OX=0, OY=0, CELL=0;
-function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); } // memastikan fungsi tersedia
 </script>
 </body>
 </html>
