@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Puzzle Kebangsaan — Irregular Cut + Muzik</title>
+<title>Puzzle Kebangsaan — Kepingan Klasik</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
 .controls{display:flex;flex-wrap:wrap;gap:8px}
-.btn,.select,.file,.rangeWrap{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+.btn,.select,.file,.range{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
 .btn:hover{background:#134674}
 .file input[type=file]{border:none;padding:0}
-.rangeWrap{display:flex;align-items:center;gap:8px}
-.rangeWrap input{accent-color:#ffd34d}
+.range{display:flex;align-items:center;gap:8px}
+.range input{accent-color:#ffd34d}
 main{padding:12px}
 .stage{
   position:relative;border:2px solid var(--line);border-radius:14px;min-height:70vh;overflow:hidden;touch-action:none;
@@ -33,7 +33,6 @@ canvas{position:absolute;inset:0}
 #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
 footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
-.small{opacity:.85}
 </style>
 </head>
 <body>
@@ -55,7 +54,6 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
       <option value="24">24 (3×8)</option>
     </select>
 
-    <button id="styleBtn" class="btn">Potongan: Irregular</button>
     <button id="startBtn" class="btn">Mula Puzzle</button>
     <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
@@ -63,12 +61,10 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
 
     <!-- Muzik MP3 -->
     <label class="file">Muzik MP3 <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3,audio/*"></label>
-    <button id="musicPlay" class="btn" title="Mainkan muzik">Main Muzik</button>
-    <button id="musicPause" class="btn" title="Hentikan muzik">Henti Muzik</button>
-    <div class="rangeWrap" title="Volum">
-      Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.7">
-    </div>
-    <button id="autoMusicBtn" class="toggle" title="Main muzik bila siap">Auto Muzik: Mati</button>
+    <button id="musicPlay" class="btn">Main Muzik</button>
+    <button id="musicPause" class="btn">Henti Muzik</button>
+    <div class="range">Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.7"></div>
+    <button id="autoMusicBtn" class="toggle">Auto Muzik: Mati</button>
   </div>
 </header>
 
@@ -84,7 +80,7 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer class="small">Tip: Muat naik gambar → Mula Puzzle. “Preview” untuk rujukan. Kepingan akan melekat bila hampir tepat. Potongan “Irregular” menjadikan setiap kepingan unik.</footer>
+<footer>Tip: Muat naik gambar → Mula Puzzle. “Preview” untuk rujukan. Kepingan melekat bila hampir tepat.</footer>
 
 <audio id="bgm" preload="auto"></audio>
 
@@ -113,7 +109,7 @@ let img=null;
 let rows=3, cols=4, pieces=[], slots=[];
 let OX=0, OY=0, CELLW=0, CELLH=0, dragging=null, offX=0, offY=0;
 let showPreview=false, viewW=0, viewH=0;
-let piecesBuilt=false, irregular=true;
+let piecesBuilt=false;
 
 /* ===== audio ===== */
 const bgm=$("#bgm");
@@ -154,73 +150,58 @@ document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?
 
 /* ===== controls ===== */
 const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,5],22:[2,11],24:[3,8]};
-$("#piecesSel").onchange=e=>{ let v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
-$("#styleBtn").onclick=function(){ irregular=!irregular; this.textContent="Potongan: "+(irregular?"Irregular":"Klasik"); if(img) buildPuzzle(); };
+$("#piecesSel").onchange=e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
 $("#previewBtn").onclick=function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); };
 $("#startBtn").onclick=()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); bgm.play().catch(()=>{}); };
 $("#shuffleBtn").onclick=()=>shuffle();
 
-/* ===== seeded random (kekal konsisten dalam satu binaan) ===== */
-function LCG(seed){ let s=seed>>>0; return ()=> (s=(s*1664525+1013904223)>>>0)/4294967296; }
-
-/* ===== bentuk jigsaw =====
-   Irregular: setiap tepi ada parameter berbeza (tab radius, bow, neck, offset).
+/* ===== bentuk jigsaw klasik =====
+   Tab/slot berselang seli, saiz tetap & simetri — realistik macam puzzle sebenar.
 */
-function pathJigsaw(c,x,y,w,h,edge){
-  const r=Math.min(w,h);
-  const R = r*edge.R;           // saiz tab
-  const bow = r*edge.bow;       // lengkung sisi
-  const nk = R*edge.neck;       // leher tab
-  const ang = edge.ang;         // anjakan posisi puncak tab
-  // helper
-  function top(){
-    if(edge.top===0){
-      c.bezierCurveTo(x+w*.25,y-bow, x+w*.75,y-bow, x+w,y);
-    }else{
-      const d=edge.top, mid=x+w/2+ang*w*0.08, L=mid-R, Rr=mid+R, cy=y - d*(R+bow*.15);
-      c.bezierCurveTo(x+w*.25,y-bow, L-nk,y-bow, L,y);
-      c.bezierCurveTo(L, y+d*R*0.55, mid-R*0.55, cy, mid, cy);
-      c.bezierCurveTo(mid+R*0.55, cy, Rr, y+d*R*0.55, Rr, y);
-      c.bezierCurveTo(Rr+nk, y-bow, x+w*.75,y-bow, x+w,y);
-    }
+const TAB_R=0.22, BOW=0.030, NECK=0.12; // perlahan-lahan boleh laras
+function pathClassic(c,x,y,w,h,edges){
+  const r=Math.min(w,h), R=r*TAB_R, bow=r*BOW, nk=R*NECK;
+  c.beginPath(); c.moveTo(x,y);
+  // TOP
+  if(edges.top===0){ c.bezierCurveTo(x+w*.25,y-bow, x+w*.75,y-bow, x+w,y); }
+  else{
+    const d=edges.top, mid=x+w/2, L=mid-R, Rr=mid+R, cy=y - d*(R+bow*.15);
+    c.bezierCurveTo(x+w*.25,y-bow, L-nk,y-bow, L,y);
+    c.bezierCurveTo(L, y+d*R*0.6, mid-R*0.6, cy, mid, cy);
+    c.bezierCurveTo(mid+R*0.6, cy, Rr, y+d*R*0.6, Rr, y);
+    c.bezierCurveTo(Rr+nk, y-bow, x+w*.75,y-bow, x+w,y);
   }
-  function right(){
-    if(edge.right===0){
-      c.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow,y+h*.75, x+w,y+h);
-    }else{
-      const d=edge.right, mid=y+h/2+ang*h*0.08, T=mid-R, B=mid+R, cx=x+w + d*(R+bow*.15);
-      c.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow, T-nk, x+w,T);
-      c.bezierCurveTo(x+w+d*R*0.55, T, cx, mid-R*0.55, cx, mid);
-      c.bezierCurveTo(cx, mid+R*0.55, x+w+d*R*0.55, B, x+w, B);
-      c.bezierCurveTo(x+w+bow, B+nk, x+w+bow, y+h*.75, x+w, y+h);
-    }
+  // RIGHT
+  if(edges.right===0){ c.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow,y+h*.75, x+w,y+h); }
+  else{
+    const d=edges.right, mid=y+h/2, T=mid-R, B=mid+R, cx=x+w + d*(R+bow*.15);
+    c.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow, T-nk, x+w,T);
+    c.bezierCurveTo(x+w+d*R*0.6, T, cx, mid-R*0.6, cx, mid);
+    c.bezierCurveTo(cx, mid+R*0.6, x+w+d*R*0.6, B, x+w, B);
+    c.bezierCurveTo(x+w+bow, B+nk, x+w+bow, y+h*.75, x+w, y+h);
   }
-  function bottom(){
-    if(edge.bottom===0){
-      c.bezierCurveTo(x+w*.75,y+h+bow, x+w*.25,y+h+bow, x, y+h);
-    }else{
-      const d=edge.bottom, mid=x+w/2+ang*w*0.08, L=mid-R, Rr=mid+R, cy=y+h + d*(R+bow*.15);
-      c.bezierCurveTo(x+w*.75,y+h+bow, Rr+nk,y+h+bow, Rr,y+h);
-      c.bezierCurveTo(Rr, y+h-d*R*0.55, mid+R*0.55, cy, mid, cy);
-      c.bezierCurveTo(mid-R*0.55, cy, L, y+h-d*R*0.55, L, y+h);
-      c.bezierCurveTo(L-nk, y+h+bow, x+w*.25, y+h+bow, x, y+h);
-    }
+  // BOTTOM
+  if(edges.bottom===0){ c.bezierCurveTo(x+w*.75,y+h+bow, x+w*.25,y+h+bow, x, y+h); }
+  else{
+    const d=edges.bottom, mid=x+w/2, L=mid-R, Rr=mid+R, cy=y+h + d*(R+bow*.15);
+    c.bezierCurveTo(x+w*.75,y+h+bow, Rr+nk,y+h+bow, Rr,y+h);
+    c.bezierCurveTo(Rr, y+h-d*R*0.6, mid+R*0.6, cy, mid, cy);
+    c.bezierCurveTo(mid-R*0.6, cy, L, y+h-d*R*0.6, L, y+h);
+    c.bezierCurveTo(L-nk, y+h+bow, x+w*.25, y+h+bow, x, y+h);
   }
-  function left(){
-    if(edge.left===0){
-      c.bezierCurveTo(x-bow,y+h*.75, x-bow,y+h*.25, x, y);
-    }else{
-      const d=edge.left, mid=y+h/2+ang*h*0.08, T=mid-R, B=mid+R, cx=x - d*(R+bow*.15);
-      c.bezierCurveTo(x-bow,y+h*.75, x-bow, B+nk, x,B);
-      c.bezierCurveTo(x-d*R*0.55, B, cx, mid+R*0.55, cx, mid);
-      c.bezierCurveTo(cx, mid-R*0.55, x-d*R*0.55, T, x, T);
-      c.bezierCurveTo(x-bow, T-nk, x-bow, y+h*.25, x, y);
-    }
+  // LEFT
+  if(edges.left===0){ c.bezierCurveTo(x-bow,y+h*.75, x-bow,y+h*.25, x, y); }
+  else{
+    const d=edges.left, mid=y+h/2, T=mid-R, B=mid+R, cx=x - d*(R+bow*.15);
+    c.bezierCurveTo(x-bow,y+h*.75, x-bow, B+nk, x,B);
+    c.bezierCurveTo(x-d*R*0.6, B, cx, mid+R*0.6, cx, mid);
+    c.bezierCurveTo(cx, mid-R*0.6, x-d*R*0.6, T, x, T);
+    c.bezierCurveTo(x-bow, T-nk, x-bow, y+h*.25, x, y);
   }
-  c.beginPath(); c.moveTo(x,y); top(); right(); bottom(); left(); c.closePath();
+  c.closePath();
 }
 
-/* ===== bina puzzle (kecil + irregular + seamless) ===== */
+/* ===== bina puzzle (kecil + klasik + seamless) ===== */
 function buildPuzzle(){
   pieces=[]; slots=[]; piecesBuilt=true;
 
@@ -233,7 +214,7 @@ function buildPuzzle(){
   // kecilkan keseluruhan sedikit
   const overallScale=0.90; tW*=overallScale; tH*=overallScale;
 
-  // saiz kepingan (kecil)
+  // saiz kepingan (kecil & jelas)
   const MIN_PIECE_PX=Math.max(30, Math.min(boxW,boxH)/Math.max(cols,rows)*0.45);
   const MAX_TARGET=Math.min(80, Math.max(boxW,boxH)/8);
   const NATIVE_MAX=Math.min(img.width/cols, img.height/rows);
@@ -246,30 +227,13 @@ function buildPuzzle(){
   OX=Math.round((W-tW)/2); OY=Math.round((H-tH)/2);
   CELLW=tW/cols; CELLH=tH/rows;
 
-  // tab map (arah keluar/masuk) + parameter irregular dikongsi merentas tepi berjiran
-  const sW=img.width/cols, sH=img.height/rows;
-  const seed = (img.width*31 + img.height*17 + rows*7 + cols*13)>>>0;
-  const rnd = LCG(seed);
-
-  // arah tab (1 keluar, -1 masuk, 0 rata)
+  // arah tab berselang (klasik): top/left rata, kanan & bawah ikut pola papan catur
   const Hdir=[], Vdir=[];
-  for(let r=0;r<rows;r++){ Hdir[r]=[]; for(let c=0;c<cols-1;c++) Hdir[r][c]=(rnd()>.5?1:-1); }
-  for(let r=0;r<rows-1;r++){ Vdir[r]=[]; for(let c=0;c<cols;c++) Vdir[r][c]=(rnd()>.5?1:-1); }
+  for(let r=0;r<rows;r++){ Hdir[r]=[]; for(let c=0;c<cols-1;c++) Hdir[r][c]= ((r+c)%2===0?1:-1); }
+  for(let r=0;r<rows-1;r++){ Vdir[r]=[]; for(let c=0;c<cols;c++) Vdir[r][c]= ((r+c)%2===0?1:-1); }
 
-  // parameter irregular untuk setiap tepi
-  const Hparam=[], Vparam=[];
-  function mkParam(){
-    return {
-      R: 0.16 + rnd()*0.07,     // tab radius relatif
-      bow: 0.030 + rnd()*0.020, // lengkung sisi
-      neck: 0.10 + rnd()*0.05,  // leher
-      ang: (rnd()-.5)*0.9       // anjakan kedudukan
-    };
-  }
-  for(let r=0;r<rows;r++){ Hparam[r]=[]; for(let c=0;c<cols-1;c++) Hparam[r][c]=mkParam(); }
-  for(let r=0;r<rows-1;r++){ Vparam[r]=[]; for(let c=0;c<cols;c++) Vparam[r][c]=mkParam(); }
-
-  const PAD=0.16, SCALE=2;
+  const sW=img.width/cols, sH=img.height/rows;
+  const PAD=0.14, SCALE=2; // PAD kecil → sambungan rapat
 
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
     const left  = (c===0)?0:-Hdir[r][c-1];
@@ -277,32 +241,17 @@ function buildPuzzle(){
     const top   = (r===0)?0: -Vdir[r-1][c];
     const bottom= (r===rows-1)?0: Vdir[r][c];
 
-    // gabungkan param (kongsi pada tepi bertentangan)
-    const prm = {
-      top:top, bottom:bottom, left:left, right:right,
-      R: (irregular? (0.16 + rnd()*0.07):0.20),
-      bow: (irregular? (0.030 + rnd()*0.020):0.035),
-      neck:(irregular? (0.10 + rnd()*0.05):0.10),
-      ang: (irregular? (rnd()-.5)*0.9 : 0)
-    };
-
-    // tetapi pastikan bersepadanan di antara jiran:
-    if(right!==0 && Hparam[r][c]) { prm.R=Hparam[r][c].R; prm.bow=Hparam[r][c].bow; prm.neck=Hparam[r][c].neck; prm.ang=Hparam[r][c].ang; }
-    if(left !==0 && Hparam[r][c-1]) { /* left guna param jiran kiri */ }
-    if(bottom!==0 && Vparam[r][c]) { prm.R=Vparam[r][c].R; prm.bow=Vparam[r][c].bow; prm.neck=Vparam[r][c].neck; prm.ang=Vparam[r][c].ang; }
-
     const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    // render dua gaya (floating = ada stroke; placed = tanpa stroke)
     const cw=Math.ceil(CELLW*(1+PAD*2)*SCALE), ch=Math.ceil(CELLH*(1+PAD*2)*SCALE);
 
-    function renderPieceCanvas(withShadow){
+    function renderPieceCanvas(withStroke){
       const can=document.createElement('canvas'); can.width=cw; can.height=ch;
       const g=can.getContext('2d'); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
       g.scale(SCALE,SCALE);
       const ox=CELLW*PAD, oy=CELLH*PAD;
 
-      pathJigsaw(g, ox, oy, CELLW, CELLH, {top, bottom, left, right, R:prm.R, bow:prm.bow, neck:prm.neck, ang:prm.ang});
+      pathClassic(g, ox, oy, CELLW, CELLH, {top,bottom,left,right});
 
       // isi imej
       g.save(); g.clip();
@@ -316,29 +265,19 @@ function buildPuzzle(){
       g.globalCompositeOperation='multiply'; g.fillStyle=ish; g.fillRect(ox-3,oy-3,CELLW+6,CELLH+6);
       g.restore();
 
-      if(withShadow){
-        // floating: stroke putih nipis + bayang ringan
+      if(withStroke){
+        // FLOATING: ada stroke putih + bayang ringan
         g.save();
-        g.shadowColor='rgba(0,0,0,.25)'; g.shadowBlur=6; g.shadowOffsetY=3;
+        g.shadowColor='rgba(0,0,0,.24)'; g.shadowBlur=6; g.shadowOffsetY=3;
         g.lineJoin='round'; g.lineCap='round';
         g.lineWidth=Math.max(1.1,Math.min(CELLW,CELLH)*0.034);
         g.strokeStyle='rgba(255,255,255,.98)';
-        pathJigsaw(g, ox, oy, CELLW, CELLH, {top, bottom, left, right, R:prm.R, bow:prm.bow, neck:prm.neck, ang:prm.ang}); g.stroke();
+        pathClassic(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
         g.restore();
 
         g.save(); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=0.7; g.strokeStyle='rgba(0,0,0,.18)';
-        pathJigsaw(g, ox, oy, CELLW, CELLH, {top, bottom, left, right, R:prm.R, bow:prm.bow, neck:prm.neck, ang:prm.ang}); g.stroke(); g.restore();
-      } // placed: tanpa stroke/bayang
-
-      // gloss halus
-      g.save(); g.clip();
-      const gloss=g.createLinearGradient(ox,oy, ox, oy+CELLH);
-      gloss.addColorStop(0,'rgba(255,255,255,.12)');
-      gloss.addColorStop(0.35,'rgba(255,255,255,.05)');
-      gloss.addColorStop(0.6,'rgba(255,255,255,0)');
-      g.globalCompositeOperation='screen'; g.fillStyle=gloss; g.fillRect(ox,oy,CELLW,CELLH);
-      g.restore();
-
+        pathClassic(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke(); g.restore();
+      }
       return {canvas:can, ox, oy};
     }
 
@@ -362,7 +301,7 @@ function shuffle(){
   draw();
 }
 
-/* ===== lukis (floating → dragging → placed) ===== */
+/* ===== lukis: floating → dragging → placed (seamless) ===== */
 function draw(){
   ctx.clearRect(0,0,W,H);
 
@@ -372,21 +311,14 @@ function draw(){
     ctx.restore();
   }
 
-  // floating
-  for(let i=0;i<pieces.length;i++){
-    const p=pieces[i]; if(p===dragging || p.placed) continue;
-    ctx.drawImage(p.bmpFloat, Math.round(p.x-p.ox), Math.round(p.y-p.oy));
-  }
-  // dragging
+  for(const p of pieces){ if(p===dragging || p.placed) continue;
+    ctx.drawImage(p.bmpFloat, Math.round(p.x-p.ox), Math.round(p.y-p.oy)); }
   if(dragging){
     const bmp = dragging.placed ? dragging.bmpPlaced : dragging.bmpFloat;
     ctx.drawImage(bmp, Math.round(dragging.x-dragging.ox), Math.round(dragging.y-dragging.oy));
   }
-  // placed (tanpa stroke) — seamless
-  for(let i=0;i<pieces.length;i++){
-    const p=pieces[i]; if(!p.placed || p===dragging) continue;
-    ctx.drawImage(p.bmpPlaced, Math.round(p.x-p.ox), Math.round(p.y-p.oy));
-  }
+  for(const p of pieces){ if(!p.placed || p===dragging) continue;
+    ctx.drawImage(p.bmpPlaced, Math.round(p.x-p.ox), Math.round(p.y-p.oy)); }
 }
 
 /* ===== DnD smooth (snap bila hampir) ===== */
@@ -420,7 +352,7 @@ board.addEventListener("pointerup",e=>{
   const p=dragging; dragging=null;
   const dx=p.x - p.target.x, dy=p.y - p.target.y;
   const dist=Math.hypot(dx,dy);
-  const SNAP_TOL = Math.min(CELLW, CELLH) * 0.38;
+  const SNAP_TOL = Math.min(CELLW, CELLH) * 0.36; // ambang snap
   if(dist<=SNAP_TOL){ p.x=p.target.x; p.y=p.target.y; p.placed=true; } else { p.placed=false; }
   draw(); checkWin();
 },{passive:false});
