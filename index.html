@@ -3,30 +3,23 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jigsaw Puzzle Malaysia — Grid Besar + Tray Kiri/Kanan</title>
+<title>Jigsaw Puzzle Malaysia — Grid Maksimum + Tray Kiri/Kanan</title>
 <style>
-:root{
-  --bg:#0a2540; --panel:#0f3359; --line:#0b2846; --text:#eaf3ff; --accent:#ffd34d;
-}
+:root{--bg:#0a2540;--panel:#0f3359;--text:#eaf3ff}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid #0b2846}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid #0b2846}
 .controls{display:flex;flex-wrap:wrap;gap:8px}
-.btn,.select,.file,.range{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+.btn,.select,.file,.range{background:#0f3359;color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
 .btn:hover{background:#134674}
 .file input[type=file]{border:none;padding:0}
 .range{display:flex;align-items:center;gap:8px}
 .range input{accent-color:#ffd34d}
 main{padding:10px}
-.stage{
-  position:relative;border:2px solid #0b2846;border-radius:14px;min-height:78vh;overflow:hidden;touch-action:none;
-  background:
-    radial-gradient(ellipse at center, rgba(0,0,0,.28), rgba(0,0,0,0) 62%) center/140% 140% no-repeat,
-    #0a2540;
-}
+.stage{position:relative;border:2px solid #0b2846;border-radius:14px;min-height:82vh;overflow:hidden;touch-action:none;background:#0a2540}
 canvas{position:absolute;inset:0}
-.toggle{background:var(--panel);border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
-.toggle.active{background:var(--accent);color:#222;border-color:#c9a43c;font-weight:700}
+.toggle{background:#0f3359;border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
+.toggle.active{background:#ffd34d;color:#222;border-color:#c9a43c;font-weight:700}
 #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
 .toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
 footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
@@ -37,24 +30,17 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
   <div style="font-weight:800">Jigsaw Puzzle Malaysia Ke-68</div>
   <div class="controls">
     <label class="file">Gambar <input id="imgInput" type="file" accept="image/*"></label>
-
     <select id="piecesSel" class="select" title="Bilangan petak">
-      <option value="6">6 (2×3)</option>
-      <option value="8">8 (2×4)</option>
-      <option value="10">10 (2×5)</option>
-      <option value="12" selected>12 (3×4)</option>
-      <option value="16">16 (4×4)</option>
-      <option value="20">20 (4×5)</option>
+      <option value="6">6 (2×3)</option><option value="8">8 (2×4)</option>
+      <option value="10">10 (2×5)</option><option value="12" selected>12 (3×4)</option>
+      <option value="16">16 (4×4)</option><option value="20">20 (4×5)</option>
       <option value="24">24 (3×8)</option>
     </select>
-
     <button id="startBtn" class="btn">Mula Puzzle</button>
     <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="fsBtn" class="btn">Skrin Penuh</button>
-
-    <!-- Muzik MP3 -->
-    <label class="file">Muzik MP3 <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3,audio/*"></label>
+    <label class="file">Muzik MP3 <input id="mp3Input" type="file" accept="audio/*"></label>
     <button id="musicPlay" class="btn">Main Muzik</button>
     <button id="musicPause" class="btn">Henti Muzik</button>
     <div class="range">Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.7"></div>
@@ -74,7 +60,7 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Grid tengah dibesarkan maksimum. Tray kepingan di kiri & kanan. Seret ke grid untuk snap. Grid rapat tanpa jarak.</footer>
+<footer>Grid tengah kini maksimum. Tray kiri/kanan kecil & takkan mengecilkan grid.</footer>
 
 <audio id="bgm" preload="auto"></audio>
 
@@ -82,41 +68,35 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 /* ===== util ===== */
 const $=s=>document.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1600);}
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
 /* ===== canvas ===== */
 const stageEl=$("#stage");
 const board=$("#board"), ctx=board.getContext("2d",{alpha:false});
 let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
 function resizeCanvas(){
-  const pad=10, w=stageEl.clientWidth, h=Math.max(620,stageEl.clientHeight);
+  const pad=10, w=stageEl.clientWidth, h=Math.max(660,stageEl.clientHeight);
   W=w-pad; H=h-pad;
   board.style.left=(pad/2)+"px"; board.style.top=(pad/2)+"px";
   board.style.width=W+"px"; board.style.height=H+"px";
   board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-  draw();
+  ctx.setTransform(DPR,0,0,DPR,0,0); draw();
 }
 addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
 
 /* ===== state ===== */
-let img=null;
-let rows=3, cols=4;
+let img=null, rows=3, cols=4;
 let pieces=[], targets=[];
 let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
 let dragging=null, offX=0, offY=0, showPreview=false, built=false;
-let trayW=0, margin=14, gutter=10; // tray kiri/kanan
-const GRID_GAP=0; // rapat!
+let trayW=0, margin=14, gutter=10;
+const GRID_GAP=0;
 
 /* ===== audio ===== */
-const bgm=$("#bgm");
-let autoMusic=false;
+const bgm=$("#bgm"); let autoMusic=false;
 $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
-$("#mp3Input").addEventListener("change", e=>{
-  const f=e.target.files[0]; if(!f) return;
-  bgm.src=URL.createObjectURL(f);
-  toast("Muzik dimuat naik.");
-});
+$("#mp3Input").addEventListener("change", e=>{ const f=e.target.files[0]; if(!f) return; bgm.src=URL.createObjectURL(f); toast("Muzik dimuat naik."); });
 $("#musicPlay").onclick=()=>{ if(!bgm.src) return toast("Muat naik MP3 dahulu."); bgm.loop=true; bgm.play().catch(()=>toast("Tekan sekali lagi untuk benarkan audio.")); };
 $("#musicPause").onclick=()=>bgm.pause();
 $("#autoMusicBtn").onclick=function(){ autoMusic=!autoMusic; this.textContent="Auto Muzik: "+(autoMusic?"Hidup":"Mati"); this.classList.toggle("active",autoMusic); };
@@ -138,69 +118,70 @@ $("#shuffleBtn").onclick=()=>shuffle();
 function isFS(){return document.fullscreenElement||document.webkitFullscreenElement;}
 $("#fsBtn").onclick=()=>{
   try{
-    if(!isFS()){
-      const el=stageEl; (el.requestFullscreen||el.webkitRequestFullscreen).call(el);
-      $("#fsBtn").textContent="Keluar Skrin Penuh";
-    }else{
-      (document.exitFullscreen||document.webkitExitFullscreen).call(document);
-      $("#fsBtn").textContent="Skrin Penuh";
-    }
+    if(!isFS()){ const el=stageEl; (el.requestFullscreen||el.webkitRequestFullscreen).call(el); $("#fsBtn").textContent="Keluar Skrin Penuh"; }
+    else{ (document.exitFullscreen||document.webkitExitFullscreen).call(document); $("#fsBtn").textContent="Skrin Penuh"; }
   }catch(e){}
 };
 document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh");
 
-/* ===== bina puzzle (grid tengah maksimum + tray kiri/kanan kecil) ===== */
+/* ===== bina puzzle — ITERATIF (grid maksimum, tray tak berlebih) ===== */
 function buildPuzzle(){
   pieces=[]; targets=[]; built=true;
 
-  // Pass 1: tray kecil (≈8% lebar), kira CELL maksimum
-  const minTrayFrac = 0.08;                    // tray kecil → grid lebih besar
-  let trayGuess = Math.max(Math.round(W*minTrayFrac), 72);
   const usableH = H - margin*2;
-  const usableW1 = W - margin*2 - 2*trayGuess - 2*gutter;
-
-  let cellH = Math.floor(usableH / rows);
-  let cellW = Math.floor(usableW1 / cols);
-  CELL = Math.max(24, Math.min(cellH, cellW)); // besar mungkin
-
-  // Pass 2: semak cukup ruang untuk semua kepingan dalam tray menegak;
-  // jika tidak, naikkan trayW sedikit (minimum yang perlu) dan re-kira CELL.
+  const minTrayFrac = 0.10;                    // ~10% skrin setiap sisi
+  const maxTrayFrac = 0.22;                    // jangan lebih 22%
   const pad=10, gap=8;
-  const total=rows*cols;
-  const rmax = Math.max(1, Math.floor((H - margin*2 - pad*2) / (CELL + gap)));
-  const colsNeeded = Math.max(1, Math.ceil((total/2) / rmax)); // setiap sisi separuh
-  const needW = pad*2 + colsNeeded*CELL + (colsNeeded-1)*gap;
 
-  trayW = Math.max(trayGuess, needW);          // minimum yang perlu
+  // mula dengan tray kecil → kira semula sampai stabil (≤5 iterasi)
+  let twGuess = Math.max(Math.round(W*minTrayFrac), 84);
+  let lastCELL = -1;
+
+  for(let iter=0; iter<5; iter++){
+    // dimensi grid dari lebar & tinggi semasa
+    let usableW = W - margin*2 - 2*twGuess - 2*gutter;
+    let cellW = Math.floor(usableW / cols);
+    let cellH = Math.floor(usableH / rows);
+    CELL = Math.max(48, Math.min(cellW, cellH));     // SAIZ MIN BESAR (48px)
+
+    // kira keperluan lajur tray berdasarkan CELL semasa
+    const total=rows*cols, half=Math.ceil(total/2);
+    const rmax = Math.max(1, Math.floor((H - margin*2 - pad*2) / (CELL + gap)));
+    const colsNeeded = Math.max(1, Math.ceil(half / rmax));
+    const needW = pad*2 + colsNeeded*CELL + (colsNeeded-1)*gap;
+
+    // tray sebenar = sekurang min + perlu, dihadkan maksimum
+    const newTW = clamp(Math.max(twGuess, needW), Math.round(W*minTrayFrac), Math.round(W*maxTrayFrac));
+
+    // jika tray berubah banyak → ulang; jika CELL tak berubah, berhenti
+    if(Math.abs(newTW - twGuess) < 2 && Math.abs(CELL - lastCELL) < 2){ twGuess=newTW; break; }
+    lastCELL = CELL; twGuess=newTW;
+  }
+  trayW = twGuess;
+
+  // final grid
   const usableW2 = W - margin*2 - 2*trayW - 2*gutter;
-  cellW = Math.floor(usableW2 / cols);
-  CELL = Math.max(24, Math.min(cellH, cellW)); // pastikan tak lebih tinggi dari skrin
-
-  // Akhir: dimensi grid & posisi
+  CELL = Math.max(48, Math.min(Math.floor(usableW2/cols), Math.floor(usableH/rows)));
   GRID_W = CELL*cols + GRID_GAP*(cols-1);
   GRID_H = CELL*rows + GRID_GAP*(rows-1);
   OX = Math.round(margin + trayW + gutter + ( (W - 2*(trayW+gutter) - margin*2) - GRID_W )/2);
   OY = Math.round(margin + (usableH - GRID_H)/2);
 
-  // Potong imej mengikut grid
+  // potong imej
   const sW = img.width/cols, sH = img.height/rows;
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
-      const tx = OX + c*(CELL+GRID_GAP);
-      const ty = OY + r*(CELL+GRID_GAP);
+      const tx = OX + c*CELL, ty = OY + r*CELL;
       const sx = c*sW, sy=r*sH;
 
-      const can=document.createElement('canvas');
-      can.width = CELL*2; can.height=CELL*2;
-      const g=can.getContext('2d'); g.scale(2,2);
-      g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
-
+      const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
+      const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
       const radius = Math.max(6, CELL*0.06);
-      g.save(); g.beginPath(); roundedRect(g, 0,0, CELL, CELL, radius); g.clip();
+      g.save(); g.beginPath(); roundedRect(g,0,0,CELL,CELL,radius); g.clip();
       g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
       g.restore();
 
-      pieces.push({r,c, x:tx, y:ty, w:CELL, h:CELL, img:can, at:{x:0,y:0}, placed:false});
+      pieces.push({r,c,x:tx,y:ty,w:CELL,h:CELL,img:can,at:{x:0,y:0},placed:false});
       targets.push({x:tx,y:ty,r,c});
     }
   }
@@ -209,39 +190,32 @@ function buildPuzzle(){
 
 function roundedRect(c,x,y,w,h,r){
   const rr=Math.min(r, w/2, h/2);
-  c.moveTo(x+rr,y);
-  c.arcTo(x+w,y, x+w,y+h, rr);
-  c.arcTo(x+w,y+h, x,y+h, rr);
-  c.arcTo(x,y+h, x,y, rr);
-  c.arcTo(x,y, x+w,y, rr);
-  c.closePath();
+  c.moveTo(x+rr,y); c.arcTo(x+w,y, x+w,y+h, rr); c.arcTo(x+w,y+h, x,y+h, rr);
+  c.arcTo(x,y+h, x,y, rr); c.arcTo(x,y, x+w,y, rr); c.closePath();
 }
 
-/* ===== letak kepingan di tray kiri & kanan ===== */
+/* ===== letak dalam tray kiri/kanan ===== */
 function shuffle(){
   if(!built) return;
   const pad=10, gap=8;
-  const total=pieces.length;
-  const halfLeft = Math.ceil(total/2);
-  const halfRight = total - halfLeft;
+  const total=pieces.length, leftCount=Math.ceil(total/2), rightCount=total-leftCount;
 
   const rmax = Math.max(1, Math.floor((H - margin*2 - pad*2) / (CELL + gap)));
-  const colsLeft  = Math.max(1, Math.ceil(halfLeft  / rmax));
-  const colsRight = Math.max(1, Math.ceil(halfRight / rmax));
+  const colsLeft  = Math.max(1, Math.ceil(leftCount  / rmax));
+  const colsRight = Math.max(1, Math.ceil(rightCount / rmax));
 
   const leftX  = Math.round(margin);
   const rightX = Math.round(W - margin - trayW);
 
   let i=0;
-  for(; i<halfLeft; i++){
+  for(; i<leftCount; i++){
     const c = i % colsLeft, r = Math.floor(i / colsLeft);
     pieces[i].at.x = leftX + pad + c*(CELL+gap);
     pieces[i].at.y = Math.round(margin + pad + r*(CELL+gap));
     pieces[i].placed=false;
   }
-  for(let k=0; k<halfRight; k++){
-    const idx = i+k;
-    const c = k % colsRight, r = Math.floor(k / colsRight);
+  for(let k=0;k<rightCount;k++){
+    const idx=i+k; const c=k % colsRight, r=Math.floor(k / colsRight);
     pieces[idx].at.x = rightX + pad + c*(CELL+gap);
     pieces[idx].at.y = Math.round(margin + pad + r*(CELL+gap));
     pieces[idx].placed=false;
@@ -251,108 +225,69 @@ function shuffle(){
 
 /* ===== lukis ===== */
 function draw(){
-  ctx.fillStyle= '#071a2f'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#071a2f'; ctx.fillRect(0,0,W,H);
 
-  // tray kiri & kanan (kecil)
-  drawTray(Math.round(margin), Math.round(margin), Math.round(trayW), H - margin*2);
-  drawTray(Math.round(W - margin - trayW), Math.round(margin), Math.round(trayW), H - margin*2);
+  drawTray(Math.round(margin),Math.round(margin),Math.round(trayW),H-margin*2);
+  drawTray(Math.round(W-margin-trayW),Math.round(margin),Math.round(trayW),H-margin*2);
 
-  // kawasan grid besar
+  // papan grid besar
   ctx.save();
-  ctx.fillStyle = '#061a2e';
-  ctx.strokeStyle = 'rgba(255,255,255,.10)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.rect(OX-8, OY-8, GRID_W+16, GRID_H+16); ctx.fill(); ctx.stroke();
-  ctx.restore();
+  ctx.fillStyle='#061a2e'; ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(OX-8, OY-8, GRID_W+16, GRID_H+16); ctx.fill(); ctx.stroke(); ctx.restore();
 
-  if(showPreview && img){
-    ctx.save(); ctx.globalAlpha=0.28;
-    ctx.drawImage(img, 0,0,img.width,img.height, OX,OY, GRID_W,GRID_H);
-    ctx.restore();
-  }
+  if(showPreview && img){ ctx.save(); ctx.globalAlpha=0.28; ctx.drawImage(img,0,0,img.width,img.height, OX,OY, GRID_W,GRID_H); ctx.restore(); }
 
   for(const p of pieces){ if(p===dragging || p.placed) continue; drawPiece(p,true); }
   if(dragging) drawPiece(dragging,true,true);
   for(const p of pieces){ if(!p.placed || p===dragging) continue; drawPiece(p,false); }
 }
-
 function drawTray(x,y,w,h){
-  ctx.save();
-  ctx.fillStyle= 'rgba(11,42,74,.96)';
-  ctx.strokeStyle='rgba(255,255,255,.08)';
-  ctx.lineWidth=1;
-  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
-  ctx.restore();
+  ctx.save(); ctx.fillStyle='rgba(11,42,74,.96)'; ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke(); ctx.restore();
 }
-
-function drawPiece(p, floating, lift){
+function drawPiece(p,floating,lift){
   if(floating){
-    ctx.save();
-    if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
-    ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h);
-    ctx.restore();
-
-    ctx.save();
-    ctx.lineWidth=Math.max(1.1, p.w*0.04);
-    ctx.strokeStyle='rgba(255,255,255,.95)';
-    ctx.beginPath(); roundedRect(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.20)';
-    ctx.beginPath(); roundedRect(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
-    ctx.restore();
+    ctx.save(); if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
+    ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.restore();
+    ctx.save(); ctx.lineWidth=Math.max(1.1,p.w*0.04); ctx.strokeStyle='rgba(255,255,255,.95)';
+    ctx.beginPath(); roundedRect(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.20)';
+    ctx.beginPath(); roundedRect(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke(); ctx.restore();
   }else{
-    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h); // tanpa stroke → seamless
+    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h); // seamless
   }
 }
 
 /* ===== DnD + snap ===== */
 function pieceAt(px,py){
-  for(let i=pieces.length-1;i>=0;i--){
-    const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
-    if(px>=x && px<=x+w && py>=y && py<=y+h) return p;
-  } return null;
+  for(let i=pieces.length-1;i>=0;i--){ const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
+    if(px>=x && px<=x+w && py>=y && py<=y+h) return p; } return null;
 }
 board.addEventListener("pointerdown",e=>{
-  e.preventDefault();
-  try{ board.setPointerCapture(e.pointerId); }catch(_){}
+  e.preventDefault(); try{ board.setPointerCapture(e.pointerId); }catch(_){}
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  const p=pieceAt(x,y); if(!p) return;
-  dragging=p; offX=x-p.at.x; offY=y-p.at.y;
+  const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.at.x; offY=y-p.at.y;
   const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]); requestAnimationFrame(draw);
 },{passive:false});
-
 board.addEventListener("pointermove",e=>{
   if(!dragging) return; e.preventDefault();
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  dragging.at.x = x-offX; dragging.at.y = y-offY;
-  requestAnimationFrame(draw);
+  dragging.at.x=x-offX; dragging.at.y=y-offY; requestAnimationFrame(draw);
 },{passive:false});
-
 board.addEventListener("pointerup",e=>{
   if(!dragging) return; e.preventDefault();
   const p=dragging; dragging=null;
-
-  const snap = findNearestTarget(p.at.x + p.w/2, p.at.y + p.h/2);
-  if(snap && !occupied(snap.r, snap.c)){
-    p.at.x = snap.x; p.at.y = snap.y;
-    p.placed = (p.x===snap.x && p.y===snap.y);
-  }
+  const snap=findNearestTarget(p.at.x+p.w/2, p.at.y+p.h/2);
+  if(snap && !occupied(snap.r,snap.c)){ p.at.x=snap.x; p.at.y=snap.y; p.placed=(p.x===snap.x && p.y===snap.y); }
   draw(); checkWin();
 },{passive:false});
-
 function findNearestTarget(cx,cy){
   if(cx>=OX && cx<=OX+GRID_W && cy>=OY && cy<=OY+GRID_H){
-    const c = Math.floor((cx - OX) / (CELL+GRID_GAP));
-    const r = Math.floor((cy - OY) / (CELL+GRID_GAP));
-    return targets[r*cols + c];
-  }
-  return null;
+    const c=Math.floor((cx-OX)/ (CELL)); const r=Math.floor((cy-OY)/ (CELL));
+    return targets[r*cols+c];
+  } return null;
 }
-function occupied(rr,cc){
-  return pieces.some(p=>p.placed && p.r===rr && p.c===cc);
-}
+function occupied(rr,cc){ return pieces.some(p=>p.placed && p.r===rr && p.c===cc); }
 
 /* ===== menang ===== */
 function checkWin(){
