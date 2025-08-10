@@ -2,8 +2,28 @@
 <html lang="ms">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- iOS: fullscreen dari Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Puzzle Kebangsaan">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+<!-- Ikon Home Screen (guna puzlab.png yang cikgu dah upload) -->
+<link rel="apple-touch-icon" href="puzlab.png">
+<link rel="apple-touch-icon" sizes="180x180" href="puzlab.png">
+<link rel="apple-touch-icon" sizes="167x167" href="puzlab.png">
+<link rel="apple-touch-icon" sizes="152x152" href="puzlab.png">
+
+<!-- Favicons (ok untuk desktop/Android juga) -->
+<link rel="icon" type="image/png" sizes="32x32" href="puzlab.png">
+<link rel="icon" type="image/png" sizes="16x16" href="puzlab.png">
+
+<!-- Manifest PWA (pastikan fail ini wujud di lokasi yang sama) -->
+<link rel="manifest" href="manifest.webmanifest">
+
 <title>Puzzle Malaysia — Sijil Fullscreen + Pangkah Matikan Muzik</title>
+
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d;--muted:#b8d3f0}
 *{box-sizing:border-box}
@@ -251,10 +271,8 @@ $("#closeOverlay").addEventListener("click",()=>{$("#celebrate").classList.remov
 function openCert(){ $("#certPane").style.display='block'; fitSigCanvas(); tryPlayBgm(); }
 function closeCert(){ 
   $("#certPane").style.display='none';
-  $("#celebrate").classList.remove("show"); // pastikan kembali ke paparan puzzle
+  $("#celebrate").classList.remove("show");
   try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){}
-  // Jika mahu redirect ke halaman lain, nyahkomen baris bawah:
-  // window.location.href = "index.html";
 }
 $("#closeCertX").addEventListener("click",closeCert);
 
@@ -267,7 +285,6 @@ function fitSigCanvas(){
   sigCanvas.height = Math.max(2, Math.round(r.height));
   sigCanvas.style.width = r.width+"px";
   sigCanvas.style.height = r.height+"px";
-  // posisi overlay tepat di atas imej
   sigCanvas.style.left = 0;
   sigCanvas.style.top = 0;
   redrawSig();
@@ -286,7 +303,7 @@ function redrawSig(){
     sg.beginPath();
     for(let i=0;i<s.pts.length;i++){
       const v=toView(s.pts[i]);
-      sg.lineWidth=s.width; // tebal pada paparan
+      sg.lineWidth=s.width; 
       if(i===0) sg.moveTo(v.x,v.y); else sg.lineTo(v.x,v.y);
     }
     sg.stroke();
@@ -303,7 +320,7 @@ sigCanvas.addEventListener("pointerdown",e=>{
   if(penOnly.checked && e.pointerType!=="pen") return;
   if(!certImg){ toast("Tiada imej sijil."); return; }
   sigCanvas.setPointerCapture(e.pointerId);
-  currentStroke={pts:[], width: parseInt(penWidth.value,10)||8}; // hitam tebal
+  currentStroke={pts:[], width: parseInt(penWidth.value,10)||8};
   addPt(e); strokes.push(currentStroke); redrawSig();
 });
 sigCanvas.addEventListener("pointermove",e=>{
@@ -324,7 +341,7 @@ $("#savePNG").addEventListener("click",()=>{
   g.fillStyle="#fff"; g.fillRect(0,0,W,H);
   g.drawImage(certImg,0,0,W,H);
   g.lineJoin="round"; g.lineCap="round"; g.strokeStyle="#000";
-  const scale = W/$("#certImgView").getBoundingClientRect().width; // skalakan tebal ke eksport
+  const scale = W/$("#certImgView").getBoundingClientRect().width;
   for(const s of strokes){
     g.beginPath();
     for(let i=0;i<s.pts.length;i++){
