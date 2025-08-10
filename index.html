@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jigsaw Puzzle Malaysia — Kepingan Segi Empat Tepat</title>
+<title>Jigsaw Puzzle Malaysia — Kepingan Segi Empat + MP3 FIX</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff}
 *{box-sizing:border-box}
@@ -11,7 +11,8 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid #0b2846}
 .controls{display:flex;flex-wrap:wrap;gap:8px}
 .btn,.select,.file,.range{background:#0f3359;color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
-.btn:hover{background:#134674}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.btn:hover:not([disabled]){background:#134674}
 .file input[type=file]{border:none;padding:0}
 .range{display:flex;align-items:center;gap:8px}
 .range input{accent-color:#ffd34d}
@@ -23,6 +24,7 @@ canvas{position:absolute;inset:0}
 #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
 .toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
 footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
+.small{opacity:.85}
 </style>
 </head>
 <body>
@@ -40,9 +42,15 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
     <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="fsBtn" class="btn">Skrin Penuh</button>
-    <label class="file">Muzik MP3 <input id="mp3Input" type="file" accept="audio/*"></label>
-    <button id="musicPlay" class="btn">Main Muzik</button>
-    <button id="musicPause" class="btn">Henti Muzik</button>
+
+    <!-- MP3: FIXED -->
+    <label class="file">Muzik MP3
+      <input id="mp3Input" type="file"
+        accept="audio/mpeg,audio/mp3,audio/mp4,audio/aac,audio/x-m4a,audio/wav,audio/ogg">
+    </label>
+    <span id="mp3Name" class="small"></span>
+    <button id="musicPlay"  class="btn" disabled>Main Muzik</button>
+    <button id="musicPause" class="btn" disabled>Henti Muzik</button>
     <div class="range">Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.7"></div>
     <button id="autoMusicBtn" class="toggle">Auto Muzik: Mati</button>
   </div>
@@ -60,9 +68,10 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Kepingan kini segi empat tepat (tiada bucu bulat). Grid rapat & tray kiri/kanan.</footer>
+<footer>Kepingan segi empat tepat. Tray kiri/kanan. MP3 kini boleh dimuat naik (termasuk iPad/iPhone).</footer>
 
-<audio id="bgm" preload="auto"></audio>
+<!-- Audio tersembunyi: controls untuk kes Safari/iOS -->
+<audio id="bgm" preload="metadata" controls playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
 
 <script>
 /* ===== util ===== */
@@ -93,12 +102,33 @@ let trayW=0, margin=14, gutter=10;
 const GRID_GAP=0;
 
 /* ===== audio ===== */
-const bgm=$("#bgm"); let autoMusic=false;
+const bgm=$("#bgm"); let autoMusic=false; let mp3URL=null;
 $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
-$("#mp3Input").addEventListener("change", e=>{ const f=e.target.files[0]; if(!f) return; bgm.src=URL.createObjectURL(f); toast("Muzik dimuat naik."); });
-$("#musicPlay").onclick=()=>{ if(!bgm.src) return toast("Muat naik MP3 dahulu."); bgm.loop=true; bgm.play().catch(()=>toast("Tekan sekali lagi untuk benarkan audio.")); };
-$("#musicPause").onclick=()=>bgm.pause();
+
+$("#mp3Input").addEventListener("change", e=>{
+  const f=e.target.files && e.target.files[0]; if(!f){ toast("Tiada fail dipilih."); return; }
+  try{
+    if(mp3URL) URL.revokeObjectURL(mp3URL);
+    mp3URL = URL.createObjectURL(f);
+    bgm.src = mp3URL;
+    bgm.load();
+    $("#mp3Name").textContent = "• " + f.name;
+    $("#musicPlay").disabled = $("#musicPause").disabled = false;
+    toast("MP3 dimuat naik: "+f.name);
+  }catch(err){
+    console.error(err);
+    toast("Gagal memuat MP3. Cuba fail .mp3/.m4a/.wav.");
+  }
+});
+
+$("#musicPlay").onclick=async ()=>{
+  if(!bgm.src){ toast("Muat naik MP3 dahulu."); return; }
+  try{ bgm.loop=true; await bgm.play(); }
+  catch(e){ toast("Benarkan audio: tekan butang ini sekali lagi."); }
+};
+$("#musicPause").onclick=()=> bgm.pause();
+
 $("#autoMusicBtn").onclick=function(){ autoMusic=!autoMusic; this.textContent="Auto Muzik: "+(autoMusic?"Hidup":"Mati"); this.classList.toggle("active",autoMusic); };
 
 /* ===== uploads & controls ===== */
@@ -111,7 +141,7 @@ $("#imgInput").addEventListener("change",e=>{
 const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
 $("#piecesSel").onchange=e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
 $("#previewBtn").onclick=function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); };
-$("#startBtn").onclick=()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); bgm.play().catch(()=>{}); };
+$("#startBtn").onclick=()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); };
 $("#shuffleBtn").onclick=()=>shuffle();
 
 /* ===== fullscreen ===== */
@@ -127,11 +157,10 @@ document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?
 /* ===== helper path: segi empat tepat ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
 
-/* ===== bina puzzle ===== */
+/* ===== bina puzzle (grid besar + tray kiri/kanan) ===== */
 function buildPuzzle(){
   pieces=[]; targets=[]; built=true;
 
-  // grid besar + tray kecil (kiri/kanan)
   const usableH = H - margin*2;
   const minTrayFrac = 0.10, maxTrayFrac = 0.22;
   const pad=10, gap=8;
@@ -167,7 +196,6 @@ function buildPuzzle(){
     const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
     const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
 
-    // ⬛ clip segi empat tepat
     rectPath(g,0,0,CELL,CELL); g.clip();
     g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
 
@@ -210,7 +238,6 @@ function draw(){
   drawTray(Math.round(margin),Math.round(margin),Math.round(trayW),H-margin*2);
   drawTray(Math.round(W-margin-trayW),Math.round(margin),Math.round(trayW),H-margin*2);
 
-  // papan grid
   ctx.save(); ctx.fillStyle='#061a2e'; ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.rect(OX-8, OY-8, GRID_W+16, GRID_H+16); ctx.fill(); ctx.stroke(); ctx.restore();
 
@@ -229,14 +256,13 @@ function drawPiece(p,floating,lift){
     ctx.save(); if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
     ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.restore();
 
-    // ⬛ stroke segi empat tepat
     ctx.save(); ctx.lineWidth=Math.max(1.1,p.w*0.04); ctx.strokeStyle='rgba(255,255,255,.95)';
     rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
 
     ctx.save(); ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.20)';
     rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
   }else{
-    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h); // tanpa stroke → seamless
+    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h); // seamless
   }
 }
 
