@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Sijil Fullscreen + Tandatangan Tebal</title>
+<title>Puzzle Malaysia — Sijil Fullscreen + Pangkah Matikan Muzik</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d;--muted:#b8d3f0}
 *{box-sizing:border-box}
@@ -42,9 +42,9 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 .cert-view{position:relative;max-width:96vw;max-height:94vh}
 #certImgView{display:block;max-width:96vw;max-height:94vh;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.6)}
 #sigCanvas{position:absolute;left:0;top:0;touch-action:none;pointer-events:auto}
+#closeCertX{position:absolute;right:18px;top:18px;width:46px;height:46px;border-radius:999px;border:1px solid #c9a43c;background:var(--accent);color:#1b1b1b;font-weight:900;font-size:22px;cursor:pointer;z-index:2}
 .cert-toolbar{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .cert-toolbar .btn{background:#0f3359cc}
-.cert-close{position:absolute;right:18px;top:18px}
 </style>
 </head>
 <body>
@@ -105,14 +105,14 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 
     <!-- SIJIL FULLSCREEN -->
     <div id="certPane">
-      <button class="btn cert-close" id="closeCert">Tutup</button>
       <div class="cert-full">
         <div class="cert-view">
+          <button id="closeCertX" title="Tutup (X)">×</button>
           <img id="certImgView" alt="Sijil">
           <canvas id="sigCanvas"></canvas>
           <div class="cert-toolbar">
+            <div class="range">Lebar Garis <input id="penWidth" type="range" min="3" max="14" step="1" value="8"></div>
             <div class="chk"><input id="penOnly" type="checkbox" checked><label for="penOnly">Pen sahaja</label></div>
-            <div class="range">Lebar Garis <input id="penWidth" type="range" min="3" max="14" step="1" value="6"></div>
             <button id="undoSig" class="btn">Undo</button>
             <button id="clearSig" class="btn">Clear</button>
             <button id="savePNG" class="btn" style="background:#ffd34d;color:#1b1b1b;border-color:#c9a43c;font-weight:700">Muat Turun PNG</button>
@@ -124,7 +124,7 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Muzik kekal bermain sehingga anda menutup paparan sijil.</footer>
+<footer>Muzik kekal bermain; klik (×) pada paparan sijil untuk hentikan muzik & kembali ke paparan utama.</footer>
 
 <audio id="bgm" preload="auto" playsinline></audio>
 
@@ -249,48 +249,44 @@ $("#closeOverlay").addEventListener("click",()=>{$("#celebrate").classList.remov
 
 /* ====== SIJIL FULLSCREEN + SIGN DI ATAS ====== */
 function openCert(){ $("#certPane").style.display='block'; fitSigCanvas(); tryPlayBgm(); }
-function closeCert(){ $("#certPane").style.display='none'; try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){} }
-$("#closeCert").addEventListener("click",closeCert);
+function closeCert(){ 
+  $("#certPane").style.display='none';
+  $("#celebrate").classList.remove("show"); // pastikan kembali ke paparan puzzle
+  try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){}
+  // Jika mahu redirect ke halaman lain, nyahkomen baris bawah:
+  // window.location.href = "index.html";
+}
+$("#closeCertX").addEventListener("click",closeCert);
 
-/* saiz kanvas tandatangan ikut saiz img yang dipaparkan */
+/* saiz kanvas tandatangan ikut saiz img dipaparkan */
 function fitSigCanvas(){
   const imgEl = certImgView;
   if(!imgEl.complete || !imgEl.naturalWidth){ return; }
-  // Pastikan kanvas overlay sama saiz paparan imej
   const r = imgEl.getBoundingClientRect();
   sigCanvas.width = Math.max(2, Math.round(r.width));
   sigCanvas.height = Math.max(2, Math.round(r.height));
   sigCanvas.style.width = r.width+"px";
   sigCanvas.style.height = r.height+"px";
-  sigCanvas.style.left = r.left - certImgView.getBoundingClientRect().left + "px"; // (0,0) relative wrapper
-  sigCanvas.style.top = r.top - certImgView.getBoundingClientRect().top + "px";
+  // posisi overlay tepat di atas imej
+  sigCanvas.style.left = 0;
+  sigCanvas.style.top = 0;
   redrawSig();
 }
 new ResizeObserver(fitSigCanvas).observe($("#certPane"));
 
-/* simpan strok dalam koordinat SIJIL ASAL (natural size) supaya eksport tajam */
+/* simpan strok (koordinat natural) */
 let strokes=[], currentStroke=null;
 const penOnly=$("#penOnly"), penWidth=$("#penWidth");
-
-function imgScale(){ // skala paparan -> natural
-  const r = certImgView.getBoundingClientRect();
-  const sx = (certImg?.naturalWidth||r.width) / r.width;
-  const sy = (certImg?.naturalHeight||r.height) / r.height;
-  return {sx,sy, viewW:r.width, viewH:r.height};
-}
-function toView(pt){ // natural -> view
-  const {sx,sy} = imgScale(); return {x: pt.x/sx, y: pt.y/sy, p: pt.p};
-}
-
+function imgScale(){const r=certImgView.getBoundingClientRect();const sx=(certImg?.naturalWidth||r.width)/r.width;const sy=(certImg?.naturalHeight||r.height)/r.height;return {sx,sy,viewW:r.width,viewH:r.height};}
+function toView(pt){const {sx,sy}=imgScale();return {x:pt.x/sx,y:pt.y/sy,p:pt.p};}
 function redrawSig(){
-  const {viewW,viewH} = imgScale();
   sg.clearRect(0,0,sigCanvas.width,sigCanvas.height);
   sg.lineJoin="round"; sg.lineCap="round"; sg.strokeStyle="#000";
   for(const s of strokes){
     sg.beginPath();
     for(let i=0;i<s.pts.length;i++){
       const v=toView(s.pts[i]);
-      sg.lineWidth=s.width; // sudah dalam piksel paparan tebal
+      sg.lineWidth=s.width; // tebal pada paparan
       if(i===0) sg.moveTo(v.x,v.y); else sg.lineTo(v.x,v.y);
     }
     sg.stroke();
@@ -301,14 +297,13 @@ function addPt(e){
   const vx=(e.clientX-rect.left), vy=(e.clientY-rect.top);
   const {sx,sy}=imgScale();
   const p=(typeof e.pressure==="number"&&e.pressure>0)?e.pressure:1;
-  // simpan dalam natural pixel
   currentStroke.pts.push({x:vx*sx,y:vy*sy,p});
 }
 sigCanvas.addEventListener("pointerdown",e=>{
   if(penOnly.checked && e.pointerType!=="pen") return;
   if(!certImg){ toast("Tiada imej sijil."); return; }
   sigCanvas.setPointerCapture(e.pointerId);
-  currentStroke={pts:[], width: parseInt(penWidth.value,10)||6}; // hitam tebal
+  currentStroke={pts:[], width: parseInt(penWidth.value,10)||8}; // hitam tebal
   addPt(e); strokes.push(currentStroke); redrawSig();
 });
 sigCanvas.addEventListener("pointermove",e=>{
@@ -321,19 +316,20 @@ sigCanvas.addEventListener("pointercancel",endStroke);
 $("#undoSig").addEventListener("click",()=>{strokes.pop();redrawSig();});
 $("#clearSig").addEventListener("click",()=>{strokes.length=0;redrawSig();});
 
-/* eksport PNG: gabung imej sijil + strok (koordinat natural) */
+/* eksport PNG (kualiti asal) */
 $("#savePNG").addEventListener("click",()=>{
   if(!certImg){ toast("Tiada imej sijil."); return; }
-  const W=certImg.naturalWidth, H=certImg.naturalHeight;
+  const W=certImg.naturalWidth,H=certImg.naturalHeight;
   const out=document.createElement("canvas"); out.width=W; out.height=H; const g=out.getContext("2d");
   g.fillStyle="#fff"; g.fillRect(0,0,W,H);
   g.drawImage(certImg,0,0,W,H);
   g.lineJoin="round"; g.lineCap="round"; g.strokeStyle="#000";
+  const scale = W/$("#certImgView").getBoundingClientRect().width; // skalakan tebal ke eksport
   for(const s of strokes){
     g.beginPath();
     for(let i=0;i<s.pts.length;i++){
       const pt=s.pts[i];
-      g.lineWidth=s.width * (W/$("#certImgView").getBoundingClientRect().width); // skalakan tebal ikut export
+      g.lineWidth=s.width*scale;
       if(i===0) g.moveTo(pt.x,pt.y); else g.lineTo(pt.x,pt.y);
     }
     g.stroke();
