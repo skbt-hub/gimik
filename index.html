@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Puzzle Kebangsaan — Smooth + Muzik</title>
+<title>Puzzle Kebangsaan — Smooth + Seamless + Muzik</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
@@ -84,7 +84,7 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Tip: Muat naik gambar → Mula Puzzle. “Preview” untuk rujukan. Kepingan kini bebas letak; akan snap bila hampir tepat.</footer>
+<footer>Tip: Muat naik gambar → Mula Puzzle. “Preview” untuk rujukan. Kepingan akan melekat bila hampir tepat.</footer>
 
 <audio id="bgm" preload="auto"></audio>
 
@@ -215,21 +215,20 @@ function pathJigsaw(c, x, y, w, h, edges){
   c.closePath();
 }
 
-/* ===== bina puzzle (kepingan lebih kecil & responsif) ===== */
+/* ===== bina puzzle (kecil + seamless) ===== */
 function buildPuzzle(){
   pieces=[]; slots=[]; piecesBuilt=true;
 
   var margin=22, boxW=W-margin*2, boxH=H-margin*2;
 
-  // fit gambar dalam ruang
+  // muatkan imej
   var rImg=img.width/img.height, rBox=boxW/boxH, tW,tH;
   if(rImg>rBox){ tW=boxW; tH=boxW/rImg; } else { tH=boxH; tW=boxH*rImg; }
 
-  // SKALA KESELURUHAN SEDIKIT KECIL SUPAYA KEPINGAN NAMPAK LEBIH KECIL
-  var overallScale = 0.90; // 90% saiz kanvas yang sesuai
-  tW*=overallScale; tH*=overallScale;
+  // kecilkan keseluruhan sedikit
+  var overallScale = 0.90; tW*=overallScale; tH*=overallScale;
 
-  // nilai kepingan lebih kecil
+  // kepingan lebih kecil
   var MIN_PIECE_PX=Math.max(30, Math.min(boxW,boxH)/Math.max(cols,rows)*0.45);
   var MAX_TARGET=Math.min(80, Math.max(boxW,boxH)/8);
   var NATIVE_MAX=Math.min(img.width/cols, img.height/rows);
@@ -238,7 +237,10 @@ function buildPuzzle(){
   if(curPiece>MAX_PIECE_PX){ var s=MAX_PIECE_PX/curPiece; tW*=s; tH*=s; }
   else if(curPiece<MIN_PIECE_PX){ s=MIN_PIECE_PX/curPiece; tW*=s; tH*=s; var over=Math.max(tW/boxW,tH/boxH); if(over>1){ tW/=over; tH/=over; } }
 
-  viewW=tW; viewH=tH; OX=(W-tW)/2; OY=(H-tH)/2; CELLW=tW/cols; CELLH=tH/rows;
+  viewW=tW; viewH=tH;
+  OX=Math.round((W-tW)/2);  // kunci ke piksel
+  OY=Math.round((H-tH)/2);
+  CELLW=tW/cols; CELLH=tH/rows;
 
   // corak tabs
   var tabsH=[], tabsV=[];
@@ -255,8 +257,8 @@ function buildPuzzle(){
 
     var slot={r:r,c:c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
 
-    // render dua gaya (HiDPI 2x)
-    var PAD=0.22, SCALE=2;
+    // render dua gaya (HiDPI 2x) — PAD kecil utk kurangkan jurang
+    var PAD=0.16, SCALE=2;
     var cw=Math.ceil(CELLW*(1+PAD*2)*SCALE), ch=Math.ceil(CELLH*(1+PAD*2)*SCALE);
 
     function renderPieceCanvas(withShadow){
@@ -265,43 +267,42 @@ function buildPuzzle(){
       g.scale(SCALE,SCALE);
       var ox=CELLW*PAD, oy=CELLH*PAD;
 
+      // bentuk
       pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right});
 
+      // imej
       g.save(); g.clip();
       var sx=c*sW, sy=r*sH; g.drawImage(img, sx, sy, sW, sH, ox, oy, CELLW, CELLH);
       g.restore();
 
+      // shading nipis
       g.save(); g.clip();
       var ish=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
-      ish.addColorStop(0,'rgba(0,0,0,.10)'); ish.addColorStop(0.5,'rgba(0,0,0,0)');
-      g.globalCompositeOperation='multiply'; g.fillStyle=ish; g.fillRect(ox-4,oy-4,CELLW+8,CELLH+8);
+      ish.addColorStop(0,'rgba(0,0,0,.08)'); ish.addColorStop(0.5,'rgba(0,0,0,0)');
+      g.globalCompositeOperation='multiply'; g.fillStyle=ish; g.fillRect(ox-3,oy-3,CELLW+6,CELLH+6);
       g.restore();
 
       if(withShadow){
+        // FLOATING: ada stroke + bayang ringan
         g.save();
-        g.shadowColor='rgba(0,0,0,.28)'; g.shadowBlur=8; g.shadowOffsetY=3;
+        g.shadowColor='rgba(0,0,0,.25)'; g.shadowBlur=6; g.shadowOffsetY=3;
         g.lineJoin='round'; g.lineCap='round';
-        g.lineWidth=Math.max(1.4,Math.min(CELLW,CELLH)*0.040);
+        g.lineWidth=Math.max(1.2,Math.min(CELLW,CELLH)*0.036);
         g.strokeStyle='rgba(255,255,255,.98)';
         pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right}); g.stroke();
         g.restore();
 
-        g.save(); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=0.75; g.strokeStyle='rgba(0,0,0,.22)';
+        g.save(); g.lineJoin='round'; g.lineCap='round';
+        g.lineWidth=0.7; g.strokeStyle='rgba(0,0,0,.18)';
         pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right}); g.stroke(); g.restore();
-      }else{
-        g.save();
-        g.lineJoin='round'; g.lineCap='round';
-        g.lineWidth=Math.max(0.7,Math.min(CELLW,CELLH)*0.016);
-        g.strokeStyle='rgba(0,0,0,.20)';
-        pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right}); g.stroke();
-        g.restore();
-      }
+      } // placed: tiada stroke/bayang
 
+      // gloss halus
       g.save(); g.clip();
       var gloss=g.createLinearGradient(ox,oy, ox, oy+CELLH);
-      gloss.addColorStop(0,'rgba(255,255,255,.16)');
-      gloss.addColorStop(0.35,'rgba(255,255,255,.06)');
-      gloss.addColorStop(0.55,'rgba(255,255,255,0)');
+      gloss.addColorStop(0,'rgba(255,255,255,.12)');
+      gloss.addColorStop(0.35,'rgba(255,255,255,.05)');
+      gloss.addColorStop(0.6,'rgba(255,255,255,0)');
       g.globalCompositeOperation='screen'; g.fillStyle=gloss; g.fillRect(ox,oy,CELLW,CELLH);
       g.restore();
 
@@ -327,25 +328,34 @@ function shuffle(){
   draw();
 }
 
-/* ===== lukis ===== */
+/* ===== lukis (floating → dragging → placed) ===== */
 function draw(){
   ctx.clearRect(0,0,W,H);
+
   if(showPreview && img && viewW>0 && viewH>0){
-    ctx.save(); ctx.globalAlpha=0.28;
-    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, viewW,viewH); ctx.restore();
+    ctx.save(); ctx.globalAlpha=0.26;
+    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, viewW,viewH);
+    ctx.restore();
   }
+
+  // floating terlebih dahulu
   for(var i=0;i<pieces.length;i++){
-    var p=pieces[i]; if(p===dragging) continue;
-    var bmp=p.placed ? p.bmpPlaced : p.bmpFloat;
-    ctx.drawImage(bmp, p.x-p.ox, p.y-p.oy);
+    var p=pieces[i]; if(p===dragging || p.placed) continue;
+    ctx.drawImage(p.bmpFloat, Math.round(p.x-p.ox), Math.round(p.y-p.oy));
   }
+  // kepingan yang diseret
   if(dragging){
     var bmp = dragging.placed ? dragging.bmpPlaced : dragging.bmpFloat;
-    ctx.drawImage(bmp, dragging.x-dragging.ox, dragging.y-dragging.oy);
+    ctx.drawImage(bmp, Math.round(dragging.x-dragging.ox), Math.round(dragging.y-dragging.oy));
+  }
+  // kemudian kepingan yang sudah tepat (tanpa stroke) — sambungan licin
+  for(var i=0;i<pieces.length;i++){
+    var p=pieces[i]; if(!p.placed || p===dragging) continue;
+    ctx.drawImage(p.bmpPlaced, Math.round(p.x-p.ox), Math.round(p.y-p.oy));
   }
 }
 
-/* ===== DnD smooth (tanpa grid; snap bila hampir betul) ===== */
+/* ===== DnD smooth (tiada grid; snap bila hampir betul) ===== */
 function pieceAt(px,py){
   for(var i=pieces.length-1;i>=0;i--){
     var p=pieces[i], bx=p.x-p.ox, by=p.y-p.oy, bw=p.bmpFloat.width, bh=p.bmpFloat.height;
@@ -360,17 +370,16 @@ board.addEventListener("pointerdown",function(e){
   try{ board.setPointerCapture(e.pointerId); }catch(_){}
   var r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   var p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.x; offY=y-p.y;
-  // bawa ke atas (z-order)
+  // naikkan z-order
   var i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]); requestAnimationFrame(draw);
 }, {passive:false});
 
 board.addEventListener("pointermove",function(e){
   if(!dragging) return; e.preventDefault();
   var r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  // clamp dalam kanvas supaya tak “hilang”
-  var nx = clamp(x-offX, -1000, W+1000); // beri ruang bebas
-  var ny = clamp(y-offY, -1000, H+1000);
-  dragging.x=nx; dragging.y=ny;
+  // beri ruang bebas supaya tak “hilang”
+  dragging.x = clamp(x-offX, -1000, W+1000);
+  dragging.y = clamp(y-offY, -1000, H+1000);
   if(!rafMoveToken){ rafMoveToken=requestAnimationFrame(function(){ rafMoveToken=null; draw(); }); }
 }, {passive:false});
 
@@ -378,14 +387,14 @@ board.addEventListener("pointerup",function(e){
   if(!dragging) return; e.preventDefault();
   var p=dragging; dragging=null;
 
-  // Kiraan jarak ke slot sebenar; snap jika hampir
+  // snap ke sasaran jika hampir
   var dx=p.x - p.target.x, dy=p.y - p.target.y;
   var dist=Math.hypot(dx,dy);
-  var SNAP_TOL = Math.min(CELLW, CELLH) * 0.38; // ambang snap (lebih besar = lebih mudah)
+  var SNAP_TOL = Math.min(CELLW, CELLH) * 0.38;
   if(dist <= SNAP_TOL){
     p.x = p.target.x; p.y = p.target.y; p.placed=true;
   }else{
-    p.placed=false; // kekal di tempat dilepaskan
+    p.placed=false;
   }
 
   draw(); checkWin();
@@ -394,10 +403,7 @@ board.addEventListener("pointerup",function(e){
 /* ===== menang ===== */
 function checkWin(){
   if(!pieces.length) return;
-  for(var i=0;i<pieces.length;i++){
-    var p=pieces[i];
-    if(!p.placed) return;
-  }
+  for(var i=0;i<pieces.length;i++){ if(!pieces[i].placed) return; }
   $("#win").style.display="flex";
   if(autoMusic && bgm.src){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
 }
