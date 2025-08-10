@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="ms">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Puzzle Kebangsaan — Kepingan Klasik</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jigsaw Puzzle Malaysia — Grid Rapat + Tray</title>
 <style>
-:root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
+:root{
+  --bg:#0a2540; --panel:#0f3359; --line:#0b2846; --text:#eaf3ff; --accent:#ffd34d;
+  --grid:#123e70; --tray:#0b2a4a;
+}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
@@ -17,7 +20,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;pa
 .range input{accent-color:#ffd34d}
 main{padding:12px}
 .stage{
-  position:relative;border:2px solid var(--line);border-radius:14px;min-height:70vh;overflow:hidden;touch-action:none;
+  position:relative;border:2px solid var(--line);border-radius:14px;min-height:72vh;overflow:hidden;touch-action:none;
   background:
     radial-gradient(ellipse at center, rgba(0,0,0,.32), rgba(0,0,0,0) 60%) center/140% 140% no-repeat,
     url('data:image/svg+xml;utf8,\
@@ -33,24 +36,24 @@ canvas{position:absolute;inset:0}
 #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
 footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
+
+/* Tray info */
+.badge{position:absolute;left:16px;right:16px;bottom:14px;display:flex;justify-content:center;pointer-events:none;font-size:12px;color:#b8d3f0}
 </style>
 </head>
 <body>
 <header>
-  <div style="font-weight:800">Selamat Menyambut Bulan Kebangsaan ke-68</div>
+  <div style="font-weight:800">Jigsaw Puzzle Malaysia Ke-68</div>
   <div class="controls">
     <label class="file">Gambar <input id="imgInput" type="file" accept="image/*"></label>
 
-    <select id="piecesSel" class="select" title="Bilangan kepingan">
+    <select id="piecesSel" class="select" title="Bilangan petak">
       <option value="6">6 (2×3)</option>
       <option value="8">8 (2×4)</option>
       <option value="10">10 (2×5)</option>
       <option value="12" selected>12 (3×4)</option>
-      <option value="14">14 (2×7)</option>
       <option value="16">16 (4×4)</option>
-      <option value="18">18 (3×6)</option>
       <option value="20">20 (4×5)</option>
-      <option value="22">22 (2×11)</option>
       <option value="24">24 (3×8)</option>
     </select>
 
@@ -76,11 +79,12 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
       <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
       <button id="againBtn" class="btn">Main Lagi</button>
     </div>
+    <div class="badge">Seret kepingan dari <strong>Tray</strong> (bahagian bawah) ke dalam kotak.</div>
   </section>
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Tip: Muat naik gambar → Mula Puzzle. “Preview” untuk rujukan. Kepingan melekat bila hampir tepat.</footer>
+<footer>Petak grid rapat (tiada jarak). Semua kepingan bermula di Tray. Lepaskan berhampiran petak untuk snap tepat.</footer>
 
 <audio id="bgm" preload="auto"></audio>
 
@@ -91,10 +95,10 @@ function toast(m){const t=$("#toast");t.textContent=m;t.style.display='block';se
 
 /* ===== canvas ===== */
 const stageEl=$("#stage");
-const board=$("#board"), ctx=board.getContext("2d");
+const board=$("#board"), ctx=board.getContext("2d",{alpha:false});
 let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
 function resizeCanvas(){
-  const pad=12, w=stageEl.clientWidth, h=Math.max(520,stageEl.clientHeight);
+  const pad=12, w=stageEl.clientWidth, h=Math.max(560,stageEl.clientHeight);
   W=w-pad; H=h-pad;
   board.style.left=(pad/2)+"px"; board.style.top=(pad/2)+"px";
   board.style.width=W+"px"; board.style.height=H+"px";
@@ -102,14 +106,15 @@ function resizeCanvas(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
   draw();
 }
-addEventListener("resize",()=>{ resizeCanvas(); if(img && piecesBuilt) buildPuzzle(); });
+addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
 
 /* ===== state ===== */
 let img=null;
-let rows=3, cols=4, pieces=[], slots=[];
-let OX=0, OY=0, CELLW=0, CELLH=0, dragging=null, offX=0, offY=0;
-let showPreview=false, viewW=0, viewH=0;
-let piecesBuilt=false;
+let rows=3, cols=4, pieces=[], targets=[];
+let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
+let dragging=null, offX=0, offY=0, showPreview=false, built=false;
+let trayY=0, trayH=0; // kawasan tray bawah
+const GRID_GAP=0;     // Rapat! tiada jarak antara petak
 
 /* ===== audio ===== */
 const bgm=$("#bgm");
@@ -125,13 +130,18 @@ $("#musicPlay").onclick=()=>{ if(!bgm.src) return toast("Muat naik MP3 dahulu.")
 $("#musicPause").onclick=()=>bgm.pause();
 $("#autoMusicBtn").onclick=function(){ autoMusic=!autoMusic; this.textContent="Auto Muzik: "+(autoMusic?"Hidup":"Mati"); this.classList.toggle("active",autoMusic); };
 
-/* ===== uploads ===== */
+/* ===== uploads & controls ===== */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=ev=>{ img=new Image(); img.onload=()=>{ toast("Gambar dimuat naik."); buildPuzzle(); }; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
+const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
+$("#piecesSel").onchange=e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
+$("#previewBtn").onclick=function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); };
+$("#startBtn").onclick=()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); bgm.play().catch(()=>{}); };
+$("#shuffleBtn").onclick=()=>shuffle();
 
 /* ===== fullscreen ===== */
 function isFS(){return document.fullscreenElement||document.webkitFullscreenElement;}
@@ -148,219 +158,232 @@ $("#fsBtn").onclick=()=>{
 };
 document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh");
 
-/* ===== controls ===== */
-const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,5],22:[2,11],24:[3,8]};
-$("#piecesSel").onchange=e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
-$("#previewBtn").onclick=function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); };
-$("#startBtn").onclick=()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); bgm.play().catch(()=>{}); };
-$("#shuffleBtn").onclick=()=>shuffle();
-
-/* ===== bentuk jigsaw klasik =====
-   Tab/slot berselang seli, saiz tetap & simetri — realistik macam puzzle sebenar.
-*/
-const TAB_R=0.22, BOW=0.030, NECK=0.12; // perlahan-lahan boleh laras
-function pathClassic(c,x,y,w,h,edges){
-  const r=Math.min(w,h), R=r*TAB_R, bow=r*BOW, nk=R*NECK;
-  c.beginPath(); c.moveTo(x,y);
-  // TOP
-  if(edges.top===0){ c.bezierCurveTo(x+w*.25,y-bow, x+w*.75,y-bow, x+w,y); }
-  else{
-    const d=edges.top, mid=x+w/2, L=mid-R, Rr=mid+R, cy=y - d*(R+bow*.15);
-    c.bezierCurveTo(x+w*.25,y-bow, L-nk,y-bow, L,y);
-    c.bezierCurveTo(L, y+d*R*0.6, mid-R*0.6, cy, mid, cy);
-    c.bezierCurveTo(mid+R*0.6, cy, Rr, y+d*R*0.6, Rr, y);
-    c.bezierCurveTo(Rr+nk, y-bow, x+w*.75,y-bow, x+w,y);
-  }
-  // RIGHT
-  if(edges.right===0){ c.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow,y+h*.75, x+w,y+h); }
-  else{
-    const d=edges.right, mid=y+h/2, T=mid-R, B=mid+R, cx=x+w + d*(R+bow*.15);
-    c.bezierCurveTo(x+w+bow,y+h*.25, x+w+bow, T-nk, x+w,T);
-    c.bezierCurveTo(x+w+d*R*0.6, T, cx, mid-R*0.6, cx, mid);
-    c.bezierCurveTo(cx, mid+R*0.6, x+w+d*R*0.6, B, x+w, B);
-    c.bezierCurveTo(x+w+bow, B+nk, x+w+bow, y+h*.75, x+w, y+h);
-  }
-  // BOTTOM
-  if(edges.bottom===0){ c.bezierCurveTo(x+w*.75,y+h+bow, x+w*.25,y+h+bow, x, y+h); }
-  else{
-    const d=edges.bottom, mid=x+w/2, L=mid-R, Rr=mid+R, cy=y+h + d*(R+bow*.15);
-    c.bezierCurveTo(x+w*.75,y+h+bow, Rr+nk,y+h+bow, Rr,y+h);
-    c.bezierCurveTo(Rr, y+h-d*R*0.6, mid+R*0.6, cy, mid, cy);
-    c.bezierCurveTo(mid-R*0.6, cy, L, y+h-d*R*0.6, L, y+h);
-    c.bezierCurveTo(L-nk, y+h+bow, x+w*.25, y+h+bow, x, y+h);
-  }
-  // LEFT
-  if(edges.left===0){ c.bezierCurveTo(x-bow,y+h*.75, x-bow,y+h*.25, x, y); }
-  else{
-    const d=edges.left, mid=y+h/2, T=mid-R, B=mid+R, cx=x - d*(R+bow*.15);
-    c.bezierCurveTo(x-bow,y+h*.75, x-bow, B+nk, x,B);
-    c.bezierCurveTo(x-d*R*0.6, B, cx, mid+R*0.6, cx, mid);
-    c.bezierCurveTo(cx, mid-R*0.6, x-d*R*0.6, T, x, T);
-    c.bezierCurveTo(x-bow, T-nk, x-bow, y+h*.25, x, y);
-  }
-  c.closePath();
-}
-
-/* ===== bina puzzle (kecil + klasik + seamless) ===== */
+/* ===== bina puzzle (grid rapat + tray bawah) ===== */
 function buildPuzzle(){
-  pieces=[]; slots=[]; piecesBuilt=true;
+  pieces=[]; targets=[]; built=true;
 
-  const margin=22, boxW=W-margin*2, boxH=H-margin*2;
+  // ruang grid (atas), tray (bawah)
+  const margin=18, trayMin=150;
+  const usableW=W-margin*2, usableH=H-margin*2;
+  // perkadaran: 72% grid, 28% tray (min 150px)
+  trayH=Math.max(trayMin, Math.round(usableH*0.28));
+  trayY=H - margin - trayH;
+  const gridH = usableH - trayH - 12; // 12px ruang antara grid & tray
+  const gridW = usableW;
 
-  // muatkan imej
-  const rImg=img.width/img.height, rBox=boxW/boxH;
-  let tW, tH; if(rImg>rBox){ tW=boxW; tH=boxW/rImg; } else { tH=boxH; tW=boxH*rImg; }
+  // kira saiz sel (petak empat segi tepat, rapat)
+  CELL = Math.floor(Math.min(gridW/cols, gridH/rows));
+  GRID_W = CELL*cols + GRID_GAP*(cols-1);
+  GRID_H = CELL*rows + GRID_GAP*(rows-1);
+  OX = Math.round((W-GRID_W)/2);
+  OY = Math.round(margin + (gridH - GRID_H)/2);
 
-  // kecilkan keseluruhan sedikit
-  const overallScale=0.90; tW*=overallScale; tH*=overallScale;
+  // potong imej ke kepingan petak
+  const sW = img.width/cols, sH = img.height/rows;
 
-  // saiz kepingan (kecil & jelas)
-  const MIN_PIECE_PX=Math.max(30, Math.min(boxW,boxH)/Math.max(cols,rows)*0.45);
-  const MAX_TARGET=Math.min(80, Math.max(boxW,boxH)/8);
-  const NATIVE_MAX=Math.min(img.width/cols, img.height/rows);
-  const MAX_PIECE_PX=Math.max(MIN_PIECE_PX, Math.min(MAX_TARGET, NATIVE_MAX));
-  const curPiece=Math.min(tW/cols, tH/rows);
-  if(curPiece>MAX_PIECE_PX){ const s=MAX_PIECE_PX/curPiece; tW*=s; tH*=s; }
-  else if(curPiece<MIN_PIECE_PX){ const s=MIN_PIECE_PX/curPiece; tW*=s; tH*=s; const over=Math.max(tW/boxW,tH/boxH); if(over>1){ tW/=over; tH/=over; } }
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const tx = OX + c*(CELL+GRID_GAP);
+      const ty = OY + r*(CELL+GRID_GAP);
+      const sx = c*sW, sy=r*sH;
 
-  viewW=tW; viewH=tH;
-  OX=Math.round((W-tW)/2); OY=Math.round((H-tH)/2);
-  CELLW=tW/cols; CELLH=tH/rows;
+      // buat kanvas kepingan
+      const can=document.createElement('canvas');
+      can.width = CELL*2; can.height=CELL*2; // HiDPI
+      const g=can.getContext('2d');
+      g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
 
-  // arah tab berselang (klasik): top/left rata, kanan & bawah ikut pola papan catur
-  const Hdir=[], Vdir=[];
-  for(let r=0;r<rows;r++){ Hdir[r]=[]; for(let c=0;c<cols-1;c++) Hdir[r][c]= ((r+c)%2===0?1:-1); }
-  for(let r=0;r<rows-1;r++){ Vdir[r]=[]; for(let c=0;c<cols;c++) Vdir[r][c]= ((r+c)%2===0?1:-1); }
-
-  const sW=img.width/cols, sH=img.height/rows;
-  const PAD=0.14, SCALE=2; // PAD kecil → sambungan rapat
-
-  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const left  = (c===0)?0:-Hdir[r][c-1];
-    const right = (c===cols-1)?0: Hdir[r][c];
-    const top   = (r===0)?0: -Vdir[r-1][c];
-    const bottom= (r===rows-1)?0: Vdir[r][c];
-
-    const slot={r,c,x:OX+c*CELLW,y:OY+r*CELLH,w:CELLW,h:CELLH}; slots.push(slot);
-
-    const cw=Math.ceil(CELLW*(1+PAD*2)*SCALE), ch=Math.ceil(CELLH*(1+PAD*2)*SCALE);
-
-    function renderPieceCanvas(withStroke){
-      const can=document.createElement('canvas'); can.width=cw; can.height=ch;
-      const g=can.getContext('2d'); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
-      g.scale(SCALE,SCALE);
-      const ox=CELLW*PAD, oy=CELLH*PAD;
-
-      pathClassic(g, ox, oy, CELLW, CELLH, {top,bottom,left,right});
-
-      // isi imej
-      g.save(); g.clip();
-      const sx=c*sW, sy=r*sH; g.drawImage(img, sx, sy, sW, sH, ox, oy, CELLW, CELLH);
+      // bingkai lembut
+      const radius = Math.max(6, CELL*0.06);
+      g.save();
+      g.beginPath();
+      roundedRect(g, 0,0, CELL, CELL, radius);
+      g.clip();
+      g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
       g.restore();
 
-      // shading nipis
-      g.save(); g.clip();
-      const ish=g.createLinearGradient(ox,oy, ox+CELLW, oy+CELLH);
-      ish.addColorStop(0,'rgba(0,0,0,.08)'); ish.addColorStop(0.5,'rgba(0,0,0,0)');
-      g.globalCompositeOperation='multiply'; g.fillStyle=ish; g.fillRect(ox-3,oy-3,CELLW+6,CELLH+6);
-      g.restore();
-
-      if(withStroke){
-        // FLOATING: ada stroke putih + bayang ringan
-        g.save();
-        g.shadowColor='rgba(0,0,0,.24)'; g.shadowBlur=6; g.shadowOffsetY=3;
-        g.lineJoin='round'; g.lineCap='round';
-        g.lineWidth=Math.max(1.1,Math.min(CELLW,CELLH)*0.034);
-        g.strokeStyle='rgba(255,255,255,.98)';
-        pathClassic(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke();
-        g.restore();
-
-        g.save(); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=0.7; g.strokeStyle='rgba(0,0,0,.18)';
-        pathClassic(g, ox, oy, CELLW, CELLH, {top,bottom,left,right}); g.stroke(); g.restore();
-      }
-      return {canvas:can, ox, oy};
+      // stroke hanya ketika terapung (dilukis dalam draw)
+      pieces.push({
+        r, c,
+        x: tx, y: ty, // target (untuk kemenangan)
+        w: CELL, h: CELL,
+        img: can,
+        at:{x:0,y:0}, // lokasi semasa (diisi ketika shuffle)
+        placed:false
+      });
+      targets.push({x:tx,y:ty,r,c});
     }
-
-    const floatBmp=renderPieceCanvas(true);
-    const placedBmp=renderPieceCanvas(false);
-    const target={x:slot.x, y:slot.y};
-
-    pieces.push({r,c,x:slot.x,y:slot.y,w:CELLW,h:CELLH,ox:floatBmp.ox,oy:floatBmp.oy,
-                 bmpFloat:floatBmp.canvas,bmpPlaced:placedBmp.canvas,placed:false,target});
   }
-
   shuffle();
 }
 
-/* ===== rawak ===== */
+function roundedRect(c,x,y,w,h,r){
+  const rr=Math.min(r, w/2, h/2);
+  c.moveTo(x+rr,y);
+  c.arcTo(x+w,y, x+w,y+h, rr);
+  c.arcTo(x+w,y+h, x,y+h, rr);
+  c.arcTo(x,y+h, x,y, rr);
+  c.arcTo(x,y, x+w,y, rr);
+  c.closePath();
+}
+
+/* ===== susun ke tray ===== */
 function shuffle(){
-  if(!piecesBuilt) return;
-  const idx=[...Array(slots.length).keys()];
-  for(let i=idx.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [idx[i],idx[j]]=[idx[j],idx[i]]; }
-  for(let i=0;i<pieces.length;i++){ const s=slots[idx[i]]; const p=pieces[i]; p.x=s.x; p.y=s.y; p.placed=false; }
+  if(!built) return;
+  // letak semua kepingan rawak di tray (bawah)
+  const pad=12;
+  const colsTray = Math.max(1, Math.floor((W - pad*2) / (CELL + 8)));
+  let cx=0, cy=0;
+  for(const p of pieces){
+    const col = cx % colsTray;
+    const row = Math.floor(cx / colsTray);
+    const px = pad + col*(CELL+8);
+    const py = trayY + pad + row*(CELL+8);
+    p.at.x = px;
+    p.at.y = py;
+    p.placed=false;
+    cx++;
+  }
   draw();
 }
 
-/* ===== lukis: floating → dragging → placed (seamless) ===== */
+/* ===== lukis ===== */
 function draw(){
-  ctx.clearRect(0,0,W,H);
+  // latar papan
+  ctx.fillStyle= '#071a2f';
+  ctx.fillRect(0,0,W,H);
 
-  if(showPreview && img && viewW>0 && viewH>0){
-    ctx.save(); ctx.globalAlpha=0.26;
-    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, viewW,viewH);
+  // grid area
+  ctx.save();
+  ctx.fillStyle = '#061a2e';
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.rect(OX-8, OY-8, GRID_W+16, GRID_H+16); ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  // preview dalam grid
+  if(showPreview && img){
+    ctx.save(); ctx.globalAlpha=0.25; ctx.drawImage(img, 0,0,img.width,img.height, OX,OY, GRID_W,GRID_H); ctx.restore();
+  }
+
+  // garisan halus antara petak (boleh set ke 0 untuk betul2 rapat)
+  if(GRID_GAP>0){
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,.06)';
+    ctx.lineWidth=GRID_GAP;
+    for(let i=1;i<cols;i++){
+      const x=OX+i*CELL + (i-1)*GRID_GAP + GRID_GAP/2;
+      ctx.beginPath(); ctx.moveTo(x,OY); ctx.lineTo(x,OY+GRID_H); ctx.stroke();
+    }
+    for(let j=1;j<rows;j++){
+      const y=OY+j*CELL + (j-1)*GRID_GAP + GRID_GAP/2;
+      ctx.beginPath(); ctx.moveTo(OX,y); ctx.lineTo(OX+GRID_W,y); ctx.stroke();
+    }
     ctx.restore();
   }
 
-  for(const p of pieces){ if(p===dragging || p.placed) continue;
-    ctx.drawImage(p.bmpFloat, Math.round(p.x-p.ox), Math.round(p.y-p.oy)); }
-  if(dragging){
-    const bmp = dragging.placed ? dragging.bmpPlaced : dragging.bmpFloat;
-    ctx.drawImage(bmp, Math.round(dragging.x-dragging.ox), Math.round(dragging.y-dragging.oy));
+  // tray bawah
+  ctx.save();
+  ctx.fillStyle= 'rgba(11,42,74,.95)';
+  ctx.strokeStyle='rgba(255,255,255,.08)';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(10, trayY, W-20, trayH-6); ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  // lukis semua kepingan: yang belum placed (dengan stroke) → dragging → placed (tanpa stroke)
+  for(const p of pieces){
+    if(p===dragging || p.placed) continue;
+    drawPiece(p, true);
   }
-  for(const p of pieces){ if(!p.placed || p===dragging) continue;
-    ctx.drawImage(p.bmpPlaced, Math.round(p.x-p.ox), Math.round(p.y-p.oy)); }
+  if(dragging) drawPiece(dragging, true, true);
+  for(const p of pieces){
+    if(!p.placed || p===dragging) continue;
+    drawPiece(p, false);
+  }
 }
 
-/* ===== DnD smooth (snap bila hampir) ===== */
+function drawPiece(p, floating, lift){
+  const x = (p===dragging? p.at.x : p.at.x);
+  const y = (p===dragging? p.at.y : p.at.y);
+  if(floating){
+    // bayang & stroke putih halus ketika di luar grid
+    ctx.save();
+    if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
+    ctx.drawImage(p.img, Math.round(x), Math.round(y), p.w, p.h);
+    ctx.restore();
+
+    ctx.save();
+    ctx.lineWidth=Math.max(1.2, p.w*0.04);
+    ctx.strokeStyle='rgba(255,255,255,.95)';
+    ctx.beginPath(); roundedRect(ctx, Math.round(x), Math.round(y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.22)';
+    ctx.beginPath(); roundedRect(ctx, Math.round(x), Math.round(y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
+    ctx.restore();
+  }else{
+    // dalam grid: tiada stroke, rapat
+    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h);
+  }
+}
+
+/* ===== DnD + snap dalam grid ===== */
 function pieceAt(px,py){
   for(let i=pieces.length-1;i>=0;i--){
-    const p=pieces[i], bx=p.x-p.ox, by=p.y-p.oy, bw=p.bmpFloat.width, bh=p.bmpFloat.height;
-    if(px>=bx && px<=bx+bw && py>=by && py<=by+bh) return p;
+    const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
+    if(px>=x && px<=x+w && py>=y && py<=y+h) return p;
   } return null;
 }
-function clamp(v,min,max){ return v<min?min:(v>max?max:v); }
-
-let rafMoveToken=null;
 board.addEventListener("pointerdown",e=>{
   e.preventDefault();
   try{ board.setPointerCapture(e.pointerId); }catch(_){}
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.x; offY=y-p.y;
+  const p=pieceAt(x,y); if(!p) return;
+  dragging=p; offX=x-p.at.x; offY=y-p.at.y;
   const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]); requestAnimationFrame(draw);
 },{passive:false});
 
 board.addEventListener("pointermove",e=>{
   if(!dragging) return; e.preventDefault();
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  dragging.x = clamp(x-offX, -1000, W+1000);
-  dragging.y = clamp(y-offY, -1000, H+1000);
-  if(!rafMoveToken){ rafMoveToken=requestAnimationFrame(()=>{ rafMoveToken=null; draw(); }); }
+  dragging.at.x = x-offX; dragging.at.y = y-offY;
+  requestAnimationFrame(draw);
 },{passive:false});
 
 board.addEventListener("pointerup",e=>{
   if(!dragging) return; e.preventDefault();
   const p=dragging; dragging=null;
-  const dx=p.x - p.target.x, dy=p.y - p.target.y;
-  const dist=Math.hypot(dx,dy);
-  const SNAP_TOL = Math.min(CELLW, CELLH) * 0.36; // ambang snap
-  if(dist<=SNAP_TOL){ p.x=p.target.x; p.y=p.target.y; p.placed=true; } else { p.placed=false; }
+
+  // jika dilepaskan berhampiran mana2 petak target → snap tepat
+  const snap = findNearestTarget(p.at.x + p.w/2, p.at.y + p.h/2);
+  if(snap && !occupied(snap.r, snap.c)){
+    p.at.x = snap.x; p.at.y = snap.y;
+    p.placed = (p.x===snap.x && p.y===snap.y);
+  }
   draw(); checkWin();
 },{passive:false});
 
+function findNearestTarget(cx,cy){
+  // cepat: jika pointer berada dalam area grid, terus kira indeks
+  if(cx>=OX && cx<=OX+GRID_W && cy>=OY && cy<=OY+GRID_H){
+    const c = Math.floor((cx - OX) / (CELL+GRID_GAP));
+    const r = Math.floor((cy - OY) / (CELL+GRID_GAP));
+    const idx = r*cols + c;
+    return targets[idx];
+  }
+  // jika luar grid, pulangkan null
+  return null;
+}
+function occupied(rr,cc){
+  return pieces.some(p=>p.placed && p.r===rr && p.c===cc);
+}
+
 /* ===== menang ===== */
 function checkWin(){
-  if(!pieces.length) return;
-  for(const p of pieces){ if(!p.placed) return; }
+  for(const p of pieces){
+    if(!(p.at.x===p.x && p.at.y===p.y)) return;
+  }
   $("#win").style.display="flex";
   if(autoMusic && bgm.src){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
 }
