@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Sijil + Tandatangan iPad</title>
+<title>Puzzle Malaysia — Upload Sijil + Tandatangan iPad</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d;--muted:#b8d3f0}
 *{box-sizing:border-box}
@@ -51,6 +51,9 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 #signPad{width:100%;max-width:700px;background:#fff;border-radius:12px;border:2px dashed #c4d7f2;touch-action:none}
 .sign-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .chk{display:flex;align-items:center;gap:6px}
+
+/* Kotak tandatangan di sijil (drag) */
+.sigBoxHelp{font-size:12px;color:#dbe9ff;opacity:.95}
 </style>
 </head>
 <body>
@@ -77,9 +80,6 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
     </label>
     <span id="mp3Name" style="opacity:.9"></span>
     <div class="range">Vol Muzik <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
-
-    <!-- BUTANG SIJIL DI HEADER -->
-    <button id="openCertHeader" class="btn primary" disabled>Buka Sijil</button>
   </div>
 </header>
 
@@ -99,8 +99,8 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
       </div>
       <div class="actions">
         <button id="againBtn" class="btn">Main Lagi</button>
-        <!-- kita kekalkan butang sijil di sini juga (opsyenal) -->
-        <button id="openCertWin" class="btn primary">Buka Sijil</button>
+        <!-- BUTANG KE SIJIL selepas menang -->
+        <button id="openCertWin" class="btn primary">Pergi ke Sijil</button>
       </div>
     </div>
 
@@ -108,7 +108,7 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
     <div id="certPane">
       <div class="cert-wrap">
         <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <h2 style="margin:6px 0">Sijil Penyertaan — SK Bukit Tongkat</h2>
+          <h2 style="margin:6px 0">Sijil — Tandatangan Guru Besar</h2>
           <div style="display:flex;gap:8px">
             <button id="backToWin" class="btn">← Kembali</button>
             <button id="printCert" class="btn">Cetak</button>
@@ -117,6 +117,10 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
         </div>
 
         <div class="panel">
+          <div class="form-row">
+            <label>Upload Sijil Siap (PNG/JPG)</label>
+            <input id="certUpload" type="file" accept="image/*">
+          </div>
           <div class="form-row">
             <label for="namaPelajar">Nama Murid</label>
             <input id="namaPelajar" placeholder="Contoh: Ahmad Zikri" />
@@ -133,10 +137,11 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
             <label for="namaGB">Nama Guru Besar</label>
             <input id="namaGB" placeholder="Contoh: Pn. Noraini binti ..." />
           </div>
+          <div class="sigBoxHelp">❖ Kotak tandatangan di kanvas sijil boleh <b>diseret</b> ke mana-mana.</div>
         </div>
 
         <div class="panel">
-          <h3 style="margin:6px 0 10px">Tandatangan Guru Besar (Digital)</h3>
+          <h3 style="margin:6px 0 10px">Tandatangan Digital (Apple Pencil)</h3>
           <div class="sign-grid">
             <canvas id="signPad" width="1600" height="600"></canvas>
             <div class="sign-tools">
@@ -145,12 +150,12 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
               <div class="chk"><input id="penOnly" type="checkbox" checked><label for="penOnly">Pen sahaja (palm rejection)</label></div>
               <div class="range">Lebar Asas <input id="baseWidth" type="range" min="0.5" max="4" step="0.5" value="2"></div>
             </div>
-            <div class="note">Tip: Guna Apple Pencil. Jika mahu guna jari/tetikus, tutup “Pen sahaja”. Tekanan (pressure) akan mempengaruhi ketebalan garisan.</div>
+            <div class="note" style="color:#dbe9ff;opacity:.9">Guna Apple Pencil. Jika mahu guna jari/tetikus, nyah tanda “Pen sahaja”. Tekanan mempengaruhi ketebalan garisan.</div>
           </div>
         </div>
 
         <div class="panel cert-canvas-wrap">
-          <canvas id="certCanvas" width="3508" height="2480"></canvas>
+          <canvas id="certCanvas" width="3508" height="2480" title="Seret kotak tandatangan"></canvas>
         </div>
       </div>
     </div>
@@ -158,7 +163,7 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Muzik auto main bila menang. “Buka Sijil” tersedia di header (aktif selepas upload gambar). Muzik hanya mati bila tekan ×.</footer>
+<footer>Muat naik sijil siap (imej), tandatangan digital dengan iPad. Muzik kemenangan berhenti hanya bila tekan ×.</footer>
 
 <!-- Audio -->
 <audio id="bgm" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
@@ -214,7 +219,7 @@ $("#shuffleBtn").addEventListener("click",()=>shuffle());
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files?.[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{ img=new Image(); img.onload=()=>{ $("#celebrateImg").src=img.src; buildPuzzle(); $("#openCertHeader").disabled=false; }; img.src=ev.target.result; };
+  r.onload=ev=>{ img=new Image(); img.onload=()=>{ $("#celebrateImg").src=img.src; buildPuzzle(); }; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
 
@@ -394,7 +399,6 @@ function checkWin(){
 }
 $("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); shuffle(); draw(); });
 $("#openCertWin").addEventListener("click",()=>{ $("#certPane").style.display='block'; renderCert(); });
-$("#openCertHeader").addEventListener("click",()=>{ $("#certPane").style.display='block'; renderCert(); });
 $("#closeMusic").addEventListener("click",()=>{ try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){}
   $("#celebrate").classList.remove("show");
 });
@@ -402,7 +406,7 @@ $("#closeMusic").addEventListener("click",()=>{ try{ if(!bgm.paused){ bgm.pause(
 /* ==================== TANDATANGAN DIGITAL ==================== */
 const signPad=$("#signPad");
 const sg=signPad.getContext("2d");
-let strokes=[], currentStroke=null; // setiap stroke: {pts:[{x,y,p}], color, base}
+let strokes=[], currentStroke=null; // setiap stroke: {pts:[{x,y,p}], base}
 let penOnlyEl=$("#penOnly");
 let baseWidthEl=$("#baseWidth");
 function fitSignPadDPI(){
@@ -452,6 +456,11 @@ $("#clearSign").addEventListener("click",()=>{ strokes.length=0; redrawSign(); }
 
 /* ==================== SIJIL ==================== */
 const certCanvas=$("#certCanvas"), cg=certCanvas.getContext("2d");
+let uploadedCert=null; // imej sijil siap
+// kotak tandatangan (relatif piksel kanvas sijil)
+let sigBox={ x: certCanvas.width*0.35, y: certCanvas.height*0.78, w: certCanvas.width*0.30, h: certCanvas.height*0.10 };
+let draggingSig=false, sigOff={x:0,y:0};
+
 (function setToday(){
   const d=new Date(); const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   $("#tarikhSijil").value=`${yyyy}-${mm}-${dd}`;
@@ -462,69 +471,99 @@ $("#printCert").addEventListener("click",()=>{ window.print(); });
 $("#savePNG").addEventListener("click",()=>{ renderCert(); const a=document.createElement("a");
   a.download=`Sijil_${($("#namaPelajar").value||"nama").replace(/\s+/g,'_')}.png`; a.href=certCanvas.toDataURL("image/png"); a.click(); });
 
+// Upload sijil siap
+$("#certUpload").addEventListener("change",e=>{
+  const f=e.target.files?.[0]; if(!f){ uploadedCert=null; renderCert(); return; }
+  const r=new FileReader();
+  r.onload=ev=>{ uploadedCert=new Image(); uploadedCert.onload=()=>{ toast("Sijil siap dimuat."); renderCert(); }; uploadedCert.src=ev.target.result; };
+  r.readAsDataURL(f);
+});
+
+// Drag kotak tandatangan atas kanvas sijil
+certCanvas.addEventListener("pointerdown",e=>{
+  const rect=certCanvas.getBoundingClientRect();
+  const scaleX=certCanvas.width/rect.width, scaleY=certCanvas.height/rect.height;
+  const x=(e.clientX-rect.left)*scaleX, y=(e.clientY-rect.top)*scaleY;
+  if(x>=sigBox.x && x<=sigBox.x+sigBox.w && y>=sigBox.y && y<=sigBox.y+sigBox.h){
+    draggingSig=true; sigOff.x=x-sigBox.x; sigOff.y=y-sigBox.y;
+    certCanvas.setPointerCapture(e.pointerId);
+  }
+});
+certCanvas.addEventListener("pointermove",e=>{
+  if(!draggingSig) return;
+  const rect=certCanvas.getBoundingClientRect();
+  const scaleX=certCanvas.width/rect.width, scaleY=certCanvas.height/rect.height;
+  const x=(e.clientX-rect.left)*scaleX, y=(e.clientY-rect.top)*scaleY;
+  sigBox.x = Math.max(0, Math.min(certCanvas.width - sigBox.w, x - sigOff.x));
+  sigBox.y = Math.max(0, Math.min(certCanvas.height - sigBox.h, y - sigOff.y));
+  renderCert();
+});
+certCanvas.addEventListener("pointerup",()=>{ draggingSig=false; });
+
 function renderCert(){
   const W=certCanvas.width, H=certCanvas.height;
 
-  // latar & bingkai
-  cg.fillStyle="#ffffff"; cg.fillRect(0,0,W,H);
-  cg.strokeStyle="#244a75"; cg.lineWidth=28; cg.strokeRect(28,28,W-56,H-56);
-  cg.strokeStyle="#ffd34d"; cg.lineWidth=10; cg.strokeRect(80,80,W-160,H-160);
-
-  // banner imej puzzle
-  if(img){
-    const bannerH=Math.floor(H*0.28), bannerW=Math.floor(W*0.82);
-    const bx=Math.floor((W-bannerW)/2), by=140;
-    const r=img.width/img.height, rb=bannerW/bannerH;
-    let dw,dh; if(r>rb){ dw=bannerW; dh=Math.round(bannerW/r);} else { dh=bannerH; dw=Math.round(bannerH*r); }
-    const dx=bx+Math.floor((bannerW-dw)/2), dy=by+Math.floor((bannerH-dh)/2);
-    cg.fillStyle="#eef4ff"; cg.fillRect(bx,by,bannerW,bannerH);
-    cg.drawImage(img,0,0,img.width,img.height, dx,dy,dw,dh);
-    cg.strokeStyle="#1d3e64"; cg.lineWidth=6; cg.strokeRect(bx,by,bannerW,bannerH);
+  // Latar: jika ada sijil muat naik, guna itu. Jika tiada, lukis sijil asas (fallback)
+  if(uploadedCert){
+    // Isi penuh (contain, ikut aspek)
+    cg.fillStyle="#ffffff"; cg.fillRect(0,0,W,H);
+    const r=uploadedCert.width/uploadedCert.height, rb=W/H;
+    let dw,dh; if(r>rb){ dw=W; dh=Math.round(W/r);} else { dh=H; dw=Math.round(H*r); }
+    const dx=Math.round((W-dw)/2), dy=Math.round((H-dh)/2);
+    cg.drawImage(uploadedCert,0,0,uploadedCert.width,uploadedCert.height, dx,dy,dw,dh);
+  }else{
+    // sijil generik (jika tak upload)
+    cg.fillStyle="#ffffff"; cg.fillRect(0,0,W,H);
+    cg.strokeStyle="#244a75"; cg.lineWidth=28; cg.strokeRect(28,28,W-56,H-56);
+    cg.strokeStyle="#ffd34d"; cg.lineWidth=10; cg.strokeRect(80,80,W-160,H-160);
+    // teks asas
+    cg.fillStyle="#0a2540"; cg.textAlign="center";
+    cg.font="900 120px system-ui,Segoe UI,Arial"; cg.fillText("SIJIL PENYERTAAN", W/2, 380);
+    cg.fillStyle="#123e70"; cg.font="700 70px system-ui,Segoe UI,Arial"; cg.fillText("SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68 — SK BUKIT TONGKAT", W/2, 480);
+    const nama=$("#namaPelajar").value || "NAMA MURID";
+    const kelas=$("#kelasPelajar").value || "KELAS";
+    const tarikh=$("#tarikhSijil").value || "";
+    cg.fillStyle="#0a2540";
+    cg.font="600 64px system-ui,Segoe UI,Arial"; cg.fillText("Anugerah ini disampaikan kepada", W/2, 640);
+    cg.font="900 120px system-ui,Segoe UI,Arial"; cg.fillText(nama.toUpperCase(), W/2, 760);
+    cg.font="600 56px system-ui,Segoe UI,Arial"; cg.fillText(`Kelas: ${kelas}`, W/2, 840);
+    cg.font="600 52px system-ui,Segoe UI,Arial"; cg.fillText(tarikh, W*0.82, H-420);
   }
 
-  // teks
-  cg.fillStyle="#0a2540"; cg.textAlign="center";
-  cg.font="900 120px system-ui,Segoe UI,Arial"; cg.fillText("SIJIL PENYERTAAN", W/2, 780);
-  cg.fillStyle="#123e70"; cg.font="700 70px system-ui,Segoe UI,Arial";
-  cg.fillText("SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68 — SK BUKIT TONGKAT", W/2, 860);
+  // Kotak tandatangan (panduan)
+  cg.save();
+  cg.strokeStyle="rgba(18,62,112,.9)"; cg.setLineDash([22,10]); cg.lineWidth=6;
+  cg.strokeRect(sigBox.x, sigBox.y, sigBox.w, sigBox.h);
+  cg.restore();
 
-  const nama=$("#namaPelajar").value || "NAMA MURID";
-  const kelas=$("#kelasPelajar").value || "KELAS";
-  const tarikh=$("#tarikhSijil").value || "";
-  const gb=$("#namaGB").value || "Guru Besar";
-
-  cg.fillStyle="#0a2540";
-  cg.font="600 64px system-ui,Segoe UI,Arial"; cg.fillText("Anugerah ini disampaikan kepada", W/2, 1020);
-  cg.font="900 120px system-ui,Segoe UI,Arial"; cg.fillText(nama.toUpperCase(), W/2, 1140);
-  cg.font="600 56px system-ui,Segoe UI,Arial"; cg.fillText(`Kelas: ${kelas}`, W/2, 1220);
-  cg.font="600 52px system-ui,Segoe UI,Arial"; cg.fillText(tarikh, W*0.82, H-420);
-
-  // kotak tandatangan
-  const sx=W*0.18, sy=H-520, sw=W*0.32, sh=180;
-  cg.strokeStyle="#375b86"; cg.lineWidth=4; cg.strokeRect(sx,sy,sw,sh);
-  cg.fillStyle="#375b86"; cg.font="600 40px system-ui,Segoe UI,Arial"; cg.textAlign="center"; cg.fillText("Tandatangan", sx+sw/2, sy+sh+50);
-
-  // garisan & nama GB
-  cg.strokeStyle="#1d3e64"; cg.lineWidth=4; 
-  const lineY=H-270; cg.beginPath(); cg.moveTo(sx, lineY); cg.lineTo(sx+sw, lineY); cg.stroke();
-  cg.fillStyle="#0a2540"; cg.font="700 48px system-ui,Segoe UI,Arial"; cg.fillText(gb, sx+sw/2, lineY+60);
-
-  // MASUKKAN TANDATANGAN DIGITAL (salin bitmap canvas signPad)
-  // scale agar muat dalam kotak (sw x sh) dengan padding
+  // Render tandatangan dari signPad → muat dalam sigBox (padding)
   const pad=20;
   const srcW=signPad.width, srcH=signPad.height;
   if(srcW && srcH){
-    const rw=sw-2*pad, rh=sh-2*pad;
+    const rw=sigBox.w-2*pad, rh=sigBox.h-2*pad;
     const r=srcW/srcH, rb=rw/rh;
     let dw,dh; if(r>rb){ dw=rw; dh=Math.round(rw/r);} else { dh=rh; dw=Math.round(rh*r); }
-    const dx=sx+(sw-dw)/2, dy=sy+(sh-dh)/2;
+    const dx=sigBox.x+(sigBox.w-dw)/2, dy=sigBox.y+(sigBox.h-dh)/2;
     cg.drawImage(signPad, 0,0,srcW,srcH, dx,dy,dw,dh);
+  }
+
+  // Nama GB di bawah kotak (opsyenal)
+  const gb=$("#namaGB").value || "";
+  if(gb){
+    cg.fillStyle="#0a2540"; cg.textAlign="center";
+    cg.font="700 48px system-ui,Segoe UI,Arial";
+    cg.fillText(gb, sigBox.x + sigBox.w/2, sigBox.y + sigBox.h + 60);
   }
 }
 
 /* ===== mula ===== */
 resizeCanvas();
-fitSignPadDPI();
+// tetapkan tarikh default
+(function(){
+  const d=new Date(); const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  $("#tarikhSijil").value=`${yyyy}-${mm}-${dd}`;
+  renderCert();
+})();
 </script>
 </body>
 </html>
