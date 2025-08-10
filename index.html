@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Puzzle Kebangsaan — Stabil</title>
+<title>Puzzle Kebangsaan — Stabil + Muzik</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
 .controls{display:flex;flex-wrap:wrap;gap:8px}
-.btn,.select,.file{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+.btn,.select,.file,.rangeWrap{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
 .btn:hover{background:#134674}
-input[type=file]{border:none;padding:0}
+.file input[type=file]{border:none;padding:0}
+.rangeWrap{display:flex;align-items:center;gap:8px}
+.rangeWrap input{accent-color:#ffd34d}
 main{padding:12px}
 .stage{
   position:relative;border:2px solid var(--line);border-radius:14px;min-height:70vh;overflow:hidden;touch-action:none;
@@ -57,6 +59,16 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
     <button id="shuffleBtn" class="btn">Kacau</button>
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="fsBtn" class="btn">Skrin Penuh</button>
+
+    <!-- Muzik MP3 -->
+    <label class="file">Muzik MP3 <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3,audio/*"></label>
+    <button id="musicPlay" class="btn" title="Mainkan muzik">Mainkan Muzik</button>
+    <button id="musicPause" class="btn" title="Hentikan muzik">Henti Muzik</button>
+    <div class="rangeWrap" title="Volum">
+      Volum
+      <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.7">
+    </div>
+    <button id="autoMusicBtn" class="toggle" title="Main muzik bila siap">Auto Muzik: Mati</button>
   </div>
 </header>
 
@@ -72,7 +84,10 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Tip: Muat naik gambar → Mula Puzzle. Guna “Preview” untuk rujukan pucuk/celah.</footer>
+<footer>Tip: Muat naik gambar → Mula Puzzle. Guna “Preview” untuk rujukan pucuk/celah. Muat naik MP3 untuk muzik latar.</footer>
+
+<!-- Elemen audio tersembunyi -->
+<audio id="bgm" preload="auto"></audio>
 
 <script>
 /* ===== util ===== */
@@ -103,6 +118,30 @@ var rows=3, cols=4, pieces=[], slots=[];
 var OX=0, OY=0, CELLW=0, CELLH=0, dragging=null, offX=0, offY=0;
 var showPreview=false, viewW=0, viewH=0;
 var piecesBuilt=false, classicPattern=true;
+
+/* ===== audio state ===== */
+var bgm=$("#bgm");
+var autoMusic=false;
+$("#volRange").addEventListener("input", e => { bgm.volume = +e.target.value; });
+bgm.volume = +$("#volRange").value;
+
+$("#mp3Input").addEventListener("change", function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var url=URL.createObjectURL(f);
+  bgm.src=url;
+  toast("Muzik dimuat naik.");
+});
+$("#musicPlay").onclick=function(){
+  if(!bgm.src){ toast("Muat naik fail MP3 dahulu."); return; }
+  bgm.loop=true;
+  bgm.play().catch(()=>toast("Tekan butang ini sekali lagi untuk benarkan mainan."));
+};
+$("#musicPause").onclick=function(){ bgm.pause(); };
+$("#autoMusicBtn").onclick=function(){
+  autoMusic=!autoMusic;
+  this.textContent = "Auto Muzik: " + (autoMusic?"Hidup":"Mati");
+  this.classList.toggle("active",autoMusic);
+};
 
 /* ===== uploads ===== */
 $("#imgInput").addEventListener("change",function(e){
@@ -139,7 +178,7 @@ var mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],14:[2,7],16:[4,4],18:[3,6],20:[4,
 $("#piecesSel").onchange=function(e){ var v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); };
 $("#patternBtn").onclick=function(){ classicPattern=!classicPattern; $("#patternBtn").textContent="Corak: "+(classicPattern?"Klasik":"Rawak"); if(img) buildPuzzle(); };
 $("#previewBtn").onclick=function(){ showPreview=!showPreview; $("#previewBtn").classList.toggle("active",showPreview); draw(); };
-$("#startBtn").onclick=function(){ if(!img){toast("Muat naik gambar dahulu.");return;} buildPuzzle(); };
+$("#startBtn").onclick=function(){ if(!img){toast("Muat naik gambar dahulu.");return;} buildPuzzle(); bgm.play().catch(()=>{}); };
 $("#shuffleBtn").onclick=function(){ shuffle(); };
 
 /* ===== bentuk jigsaw ===== */
@@ -178,18 +217,19 @@ function pathJigsaw(c, x, y, w, h, edges){
   c.closePath();
 }
 
-/* ===== bina puzzle (responsif + 2 gaya) ===== */
+/* ===== bina puzzle (kepingan lebih kecil) ===== */
 function buildPuzzle(){
   pieces=[]; slots=[]; piecesBuilt=true;
 
-  var margin=20, boxW=W-margin*2, boxH=H-margin*2;
+  var margin=22, boxW=W-margin*2, boxH=H-margin*2;
   // fit gambar
   var rImg=img.width/img.height, rBox=boxW/boxH, tW,tH;
   if(rImg>rBox){ tW=boxW; tH=boxW/rImg; } else { tH=boxH; tW=boxH*rImg; }
 
-  // clamp responsif + hormati resolusi imej
-  var MIN_PIECE_PX=Math.max(80, Math.min(boxW,boxH)/Math.max(cols,rows)*0.75);
-  var MAX_TARGET=Math.min(180, Math.max(boxW,boxH)/5);
+  // ——— SAIZ KEPINGAN DIKECILKAN ———
+  // Nilai asal: MIN 80, MAX_TARGET 180 → kini lebih kecil & halus
+  var MIN_PIECE_PX=Math.max(48, Math.min(boxW,boxH)/Math.max(cols,rows)*0.60);
+  var MAX_TARGET=Math.min(120, Math.max(boxW,boxH)/6);
   var NATIVE_MAX=Math.min(img.width/cols, img.height/rows);
   var MAX_PIECE_PX=Math.max(MIN_PIECE_PX, Math.min(MAX_TARGET, NATIVE_MAX));
   var curPiece=Math.min(tW/cols, tH/rows);
@@ -237,19 +277,19 @@ function buildPuzzle(){
 
       if(withShadow){
         g.save();
-        g.shadowColor='rgba(0,0,0,.35)'; g.shadowBlur=10; g.shadowOffsetY=4;
+        g.shadowColor='rgba(0,0,0,.30)'; g.shadowBlur=8; g.shadowOffsetY=3;
         g.lineJoin='round'; g.lineCap='round';
-        g.lineWidth=Math.max(1.8,Math.min(CELLW,CELLH)*0.055);
+        g.lineWidth=Math.max(1.6,Math.min(CELLW,CELLH)*0.045);
         g.strokeStyle='rgba(255,255,255,.98)';
         pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right}); g.stroke();
         g.restore();
 
-        g.save(); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=0.9; g.strokeStyle='rgba(0,0,0,.22)';
+        g.save(); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=0.8; g.strokeStyle='rgba(0,0,0,.22)';
         pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right}); g.stroke(); g.restore();
       }else{
         g.save();
         g.lineJoin='round'; g.lineCap='round';
-        g.lineWidth=Math.max(0.9,Math.min(CELLW,CELLH)*0.020);
+        g.lineWidth=Math.max(0.8,Math.min(CELLW,CELLH)*0.018);
         g.strokeStyle='rgba(0,0,0,.20)';
         pathJigsaw(g, ox, oy, CELLW, CELLH, {top:top,bottom:bottom,left:left,right:right}); g.stroke();
         g.restore();
@@ -257,7 +297,7 @@ function buildPuzzle(){
 
       g.save(); g.clip();
       var gloss=g.createLinearGradient(ox,oy, ox, oy+CELLH);
-      gloss.addColorStop(0,'rgba(255,255,255,.20)');
+      gloss.addColorStop(0,'rgba(255,255,255,.18)');
       gloss.addColorStop(0.35,'rgba(255,255,255,.06)');
       gloss.addColorStop(0.55,'rgba(255,255,255,0)');
       g.globalCompositeOperation='screen'; g.fillStyle=gloss; g.fillRect(ox,oy,CELLW,CELLH);
@@ -298,7 +338,7 @@ function draw(){
     ctx.drawImage(bmp, p.x-p.ox, p.y-p.oy);
   }
   if(dragging){
-    bmp = dragging.placed ? dragging.bmpPlaced : dragging.bmpFloat;
+    var bmp = dragging.placed ? dragging.bmpPlaced : dragging.bmpFloat;
     ctx.drawImage(bmp, dragging.x-dragging.ox, dragging.y-dragging.oy);
   }
 }
@@ -346,6 +386,7 @@ function checkWin(){
     if(Math.abs(p.x-p.target.x)>=0.5 || Math.abs(p.y-p.target.y)>=0.5) return;
   }
   $("#win").style.display="flex";
+  if(autoMusic && bgm.src){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
 }
 $("#againBtn").onclick=function(){ $("#win").style.display="none"; shuffle(); };
 
