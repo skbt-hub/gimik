@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jigsaw Puzzle Malaysia — Kepingan Segi Empat + MP3 FIX</title>
+<title>Jigsaw Puzzle Malaysia — Kemenangan dengan Gambar & Lagu</title>
 <style>
-:root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff}
+:root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid #0b2846}
@@ -21,9 +21,33 @@ main{padding:10px}
 canvas{position:absolute;inset:0}
 .toggle{background:#0f3359;border:1px solid #1a4d82;border-radius:999px;padding:6px 10px}
 .toggle.active{background:#ffd34d;color:#222;border-color:#c9a43c;font-weight:700}
-#win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
 .toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
 footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
+
+/* Paparan kemenangan (gambar besar + teks) */
+#celebrate{
+  position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column;
+  background:rgba(0,0,0,.85); z-index:20;
+}
+#celebrate.show{display:flex; animation:fadeIn .5s ease both;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.big-wrap{
+  width:min(96%,1200px); max-height:80vh; display:grid; place-items:center; padding:10px;
+}
+.big-img{
+  width:100%; max-height:70vh; object-fit:contain; border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.08);
+  background:#061a2e;
+}
+.title{
+  margin-top:14px; text-align:center; line-height:1.25;
+  font-weight:800; letter-spacing:.5px;
+  text-shadow:0 2px 8px rgba(0,0,0,.7);
+}
+.title .line1{font-size:min(5.5vw,38px)}
+.title .line2{font-size:min(5vw,34px); color:var(--accent)}
+.actions{display:flex; gap:10px; margin-top:16px}
+.actions .btn{background:#ffd34d;color:#1e2125;border-color:#c9a43c;font-weight:700}
 .small{opacity:.85}
 </style>
 </head>
@@ -43,35 +67,44 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="fsBtn" class="btn">Skrin Penuh</button>
 
-    <!-- MP3: FIXED -->
+    <!-- MP3 -->
     <label class="file">Muzik MP3
       <input id="mp3Input" type="file"
-        accept="audio/mpeg,audio/mp3,audio/mp4,audio/aac,audio/x-m4a,audio/wav,audio/ogg">
+             accept="audio/mpeg,audio/mp3,audio/mp4,audio/aac,audio/x-m4a,audio/wav,audio/ogg">
     </label>
     <span id="mp3Name" class="small"></span>
     <button id="musicPlay"  class="btn" disabled>Main Muzik</button>
     <button id="musicPause" class="btn" disabled>Henti Muzik</button>
-    <div class="range">Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.7"></div>
-    <button id="autoMusicBtn" class="toggle">Auto Muzik: Mati</button>
+    <div class="range">Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
   </div>
 </header>
 
 <main>
   <section id="stage" class="stage">
     <canvas id="board"></canvas>
-    <div id="win">
-      <h3 style="margin:0">TAHNIAH ANDA BERJAYA!</h3>
-      <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
-      <button id="againBtn" class="btn">Main Lagi</button>
+
+    <!-- Paparan kemenangan -->
+    <div id="celebrate" aria-live="polite">
+      <div class="big-wrap">
+        <img id="celebrateImg" class="big-img" alt="Gambar kemenangan">
+      </div>
+      <div class="title">
+        <div class="line1">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68</div>
+        <div class="line2">SK BUKIT TONGKAT</div>
+      </div>
+      <div class="actions">
+        <button id="againBtn" class="btn">Main Lagi</button>
+        <button id="tapToPlay" class="btn" style="display:none">Mainkan Lagu</button>
+      </div>
     </div>
   </section>
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Kepingan segi empat tepat. Tray kiri/kanan. MP3 kini boleh dimuat naik (termasuk iPad/iPhone).</footer>
+<footer>Paparan kemenangan: gambar besar + teks. Lagu MP3 akan dimainkan automatik bila siap.</footer>
 
-<!-- Audio tersembunyi: controls untuk kes Safari/iOS -->
-<audio id="bgm" preload="metadata" controls playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
+<!-- Audio (tersembunyi) -->
+<audio id="bgm" preload="metadata" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
 
 <script>
 /* ===== util ===== */
@@ -79,7 +112,7 @@ const $=s=>document.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1600);}
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
-/* ===== canvas ===== */
+/* ===== canvas & layout ===== */
 const stageEl=$("#stage");
 const board=$("#board"), ctx=board.getContext("2d",{alpha:false});
 let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
@@ -102,7 +135,7 @@ let trayW=0, margin=14, gutter=10;
 const GRID_GAP=0;
 
 /* ===== audio ===== */
-const bgm=$("#bgm"); let autoMusic=false; let mp3URL=null;
+const bgm=$("#bgm"); let mp3URL=null;
 $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
 
@@ -116,26 +149,16 @@ $("#mp3Input").addEventListener("change", e=>{
     $("#mp3Name").textContent = "• " + f.name;
     $("#musicPlay").disabled = $("#musicPause").disabled = false;
     toast("MP3 dimuat naik: "+f.name);
-  }catch(err){
-    console.error(err);
-    toast("Gagal memuat MP3. Cuba fail .mp3/.m4a/.wav.");
-  }
+  }catch(err){ toast("Gagal memuat MP3."); }
 });
-
-$("#musicPlay").onclick=async ()=>{
-  if(!bgm.src){ toast("Muat naik MP3 dahulu."); return; }
-  try{ bgm.loop=true; await bgm.play(); }
-  catch(e){ toast("Benarkan audio: tekan butang ini sekali lagi."); }
-};
+$("#musicPlay").onclick=async ()=>{ if(!bgm.src) return toast("Muat naik MP3 dahulu."); try{ bgm.loop=true; await bgm.play(); }catch{ toast("Tekan sekali lagi untuk main."); } };
 $("#musicPause").onclick=()=> bgm.pause();
 
-$("#autoMusicBtn").onclick=function(){ autoMusic=!autoMusic; this.textContent="Auto Muzik: "+(autoMusic?"Hidup":"Mati"); this.classList.toggle("active",autoMusic); };
-
-/* ===== uploads & controls ===== */
+/* ===== controls ===== */
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{ img=new Image(); img.onload=()=>{ toast("Gambar dimuat naik."); buildPuzzle(); }; img.src=ev.target.result; };
+  r.onload=ev=>{ img=new Image(); img.onload=()=>{ toast("Gambar dimuat naik."); buildPuzzle(); $("#celebrateImg").src=img.src; }; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
 const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
@@ -154,7 +177,7 @@ $("#fsBtn").onclick=()=>{
 };
 document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh");
 
-/* ===== helper path: segi empat tepat ===== */
+/* ===== helper: segi empat tepat ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
 
 /* ===== bina puzzle (grid besar + tray kiri/kanan) ===== */
@@ -205,7 +228,7 @@ function buildPuzzle(){
   shuffle();
 }
 
-/* ===== letak di tray kiri/kanan ===== */
+/* ===== letak kepingan di tray kiri/kanan ===== */
 function shuffle(){
   const pad=10, gap=8;
   const total=pieces.length, leftCount=Math.ceil(total/2), rightCount=total-leftCount;
@@ -231,7 +254,7 @@ function shuffle(){
   draw();
 }
 
-/* ===== lukis ===== */
+/* ===== lukis papan & kepingan ===== */
 function draw(){
   ctx.fillStyle='#071a2f'; ctx.fillRect(0,0,W,H);
 
@@ -297,13 +320,26 @@ function findNearestTarget(cx,cy){
 }
 function occupied(rr,cc){ return pieces.some(p=>p.placed && p.r===rr && p.c===cc); }
 
-/* ===== menang ===== */
+/* ===== MENANG: papar gambar besar + main lagu automatik ===== */
 function checkWin(){
   for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; }
-  $("#win").style.display="flex";
-  if(autoMusic && bgm.src){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
+
+  // Papar overlay kemenangan dengan gambar penuh
+  $("#celebrateImg").src = img?.src || "";
+  $("#celebrate").classList.add("show");
+
+  // Cuba mainkan lagu automatik
+  if(bgm.src){
+    bgm.currentTime = 0; bgm.loop = true;
+    bgm.play().catch(()=>{ // kalau disekat autoplay
+      $("#tapToPlay").style.display='inline-block';
+      $("#tapToPlay").onclick = ()=> bgm.play().then(()=> $("#tapToPlay").style.display='none');
+    });
+  }
 }
-$("#againBtn").onclick=()=>{ $("#win").style.display="none"; shuffle(); };
+
+// butang main lagi
+$("#againBtn").onclick=()=>{ $("#celebrate").classList.remove("show"); shuffle(); };
 
 /* ===== init ===== */
 resizeCanvas();
