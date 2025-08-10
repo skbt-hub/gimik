@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Sijil: Tandatangan Terus</title>
+<title>Puzzle Malaysia — Sijil: Tandatangan Terus + Auto Muzik</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d;--muted:#b8d3f0}
 *{box-sizing:border-box}
@@ -67,7 +67,8 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 
     <!-- Muzik -->
     <label class="file">Muzik MP3
-      <input id="mp3Input" type="file" accept="audio/*">
+      <!-- terima banyak format + .mp3 khusus -->
+      <input id="mp3Input" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg">
     </label>
     <span id="mp3Name" style="opacity:.9"></span>
     <div class="range">Vol Muzik <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
@@ -95,6 +96,8 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
       <div class="actions">
         <button id="againBtn" class="btn">Main Lagi</button>
         <button id="openCertWin" class="btn" style="background:#ffd34d;color:#1b1b1b;border-color:#c9a43c;font-weight:700">Pergi ke Sijil</button>
+        <!-- Ditunjukkan jika autoplay gagal pada iOS -->
+        <button id="enableSound" class="btn" style="display:none">Aktifkan Bunyi</button>
       </div>
     </div>
 
@@ -115,9 +118,8 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
         </div>
 
         <div class="panel cert-canvas-wrap">
-          <!-- TANDATANGAN TERUS DI SINI -->
-          <canvas id="certCanvas" width="3508" height="2480" title="Tandatangan di atas sijil (guna Apple Pencil)"></canvas>
-          <div style="opacity:.9;font-size:12px;margin-top:6px">Nota: Pastikan anda telah upload fail sijil (PNG/JPG) di atas. Tandatangan terus pada sijil.</div>
+          <canvas id="certCanvas" width="3508" height="2480" title="Tandatangan terus pada sijil (guna Apple Pencil)"></canvas>
+          <div style="opacity:.9;font-size:12px;margin-top:6px">Nota: Sijil menggunakan fail PNG/JPG yang anda upload di atas. Tandatangan terus di atas sijil.</div>
         </div>
       </div>
     </div>
@@ -125,9 +127,9 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Muzik auto main bila menang. “Pergi ke Sijil” paparkan sijil upload & boleh tandatangan terus di atasnya. Muzik hanya mati bila tekan ×.</footer>
+<footer>Muzik auto main bila menang (dengan kaedah unlock audio). Jika tidak, tekan “Aktifkan Bunyi”.</footer>
 
-<audio id="bgm" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
+<audio id="bgm" preload="auto" playsinline></audio>
 
 <script>
 /* ===== util ===== */
@@ -135,7 +137,7 @@ const $=s=>document.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1600);}
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
-/* ===== puzzle setup (ringkas, sama seperti versi sebelum) ===== */
+/* ===== puzzle setup (ringkas) ===== */
 const stageEl=$("#stage");
 const board=$("#board"), ctx=board.getContext("2d",{alpha:false});
 let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
@@ -153,16 +155,54 @@ addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); 
 let img=null; let rows=3, cols=4;
 let pieces=[], targets=[], OX=0, OY=0, CELL=0, dragging=null, offX=0, showPreview=false, built=false;
 let trayW=0, margin=14, gutter=10;
-const bgm=$("#bgm"); let mp3URL=null;
+
+/* ====== AUDIO: load + unlock + autoplay selepas menang ====== */
+const bgm=$("#bgm"); let mp3URL=null; let audioUnlocked=false;
 
 $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
+
+// 1) Unlock audio sekali: mana-mana sentuhan pertama
+function unlockAudio(){
+  if(audioUnlocked) return;
+  try{
+    const p=bgm.play(); // cuba main (tiada src pun tak apa)
+    if(p && p.then){
+      p.then(()=>{ bgm.pause(); bgm.currentTime=0; audioUnlocked=true; document.removeEventListener('pointerdown',unlockAudio,true); })
+       .catch(()=>{ /* ignore */ });
+    }else{
+      audioUnlocked=true;
+      document.removeEventListener('pointerdown',unlockAudio,true);
+    }
+  }catch(_){}
+}
+document.addEventListener('pointerdown',unlockAudio,true);
+
+// 2) Upload fail MP3
 $("#mp3Input").addEventListener("change", e=>{
   const f=e.target.files?.[0]; if(!f){ toast("Tiada fail muzik."); return; }
   if(mp3URL) URL.revokeObjectURL(mp3URL);
-  mp3URL = URL.createObjectURL(f); bgm.src=mp3URL; bgm.load(); bgm.loop=true;
-  $("#mp3Name").textContent="• "+f.name; toast("Muzik dimuat naik.");
+  mp3URL = URL.createObjectURL(f);
+  bgm.src = mp3URL;
+  bgm.load();
+  bgm.muted = false;
+  $("#mp3Name").textContent = "• " + f.name;
+  toast("Muzik dimuat naik. Ia akan dimainkan bila anda menang.");
 });
+
+// 3) Cuba main semasa menang; jika gagal, tunjuk butang “Aktifkan Bunyi”
+function tryPlayBgm(){
+  if(!bgm.src) return;
+  bgm.loop=true;
+  const p = bgm.play();
+  if(p && p.then){
+    p.then(()=>{ $("#enableSound").style.display="none"; })
+     .catch(()=>{ $("#enableSound").style.display="inline-block"; });
+  }
+}
+$("#enableSound").addEventListener("click",()=>{ tryPlayBgm(); });
+
+/* ===== Upload sijil (di header) ===== */
 let certImg=null;
 $("#certUpload").addEventListener("change",e=>{
   const f=e.target.files?.[0]; if(!f){ certImg=null; $("#certName").textContent=""; renderCert(); return; }
@@ -171,6 +211,7 @@ $("#certUpload").addEventListener("change",e=>{
   r.readAsDataURL(f);
 });
 
+/* ===== controls asas ===== */
 const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
 $("#piecesSel").addEventListener("change",e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); });
 $("#previewBtn").addEventListener("click",function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); });
@@ -186,7 +227,10 @@ function isFS(){return document.fullscreenElement||document.webkitFullscreenElem
 $("#fsBtn").addEventListener("click",()=>{ try{ if(!isFS()){ const el=stageEl; (el.requestFullscreen||el.webkitRequestFullscreen).call(el); $("#fsBtn").textContent="Keluar Skrin Penuh"; } else { (document.exitFullscreen||document.webkitExitFullscreen).call(document); $("#fsBtn").textContent="Skrin Penuh"; } }catch(e){} });
 document.addEventListener("fullscreenchange",()=>{ $("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh"; });
 
+/* ===== helper ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
+
+/* ===== bina puzzle ===== */
 function buildPuzzle(){
   pieces=[]; targets=[]; built=true;
   const usableH = H - margin*2;
@@ -243,8 +287,14 @@ board.addEventListener("pointermove",e=>{ if(!dragging) return; e.preventDefault
 board.addEventListener("pointerup",e=>{ if(!dragging) return; e.preventDefault(); const p=dragging; dragging=null; const snap=findNearestTarget(p.at.x+p.w/2,p.at.y+p.h/2); if(snap && !occupied(snap.r,snap.c)){ p.at.x=snap.x; p.at.y=snap.y; p.placed=(p.r===snap.r && p.c===snap.c); } draw(); checkWin(); },{passive:false});
 function findNearestTarget(cx,cy){ const GW=CELL*cols,GH=CELL*rows; if(cx>=OX&&cx<=OX+GW&&cy>=OY&&cy<=OY+GH){ const c=Math.floor((cx-OX)/CELL), r=Math.floor((cy-OY)/CELL); return targets[r*cols+c]; } return null; }
 function occupied(rr,cc){ return pieces.some(p=>p.placed && p.r===rr && p.c===cc); }
-function checkWin(){ for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; } $("#celebrateImg").src=img?.src||""; $("#celebrate").classList.add("show"); if(bgm.src){ try{ bgm.currentTime=0; bgm.loop=true; const pr=bgm.play(); if(pr?.then) pr.catch(()=>{});}catch{} } }
-$("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); shuffle(); draw(); });
+function checkWin(){
+  for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; }
+  $("#celebrateImg").src=img?.src||"";
+  $("#celebrate").classList.add("show");
+  // main muzik (autoplay)
+  tryPlayBgm();
+}
+$("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); $("#enableSound").style.display="none"; shuffle(); draw(); });
 $("#openCertWin").addEventListener("click",()=>{ if(!certImg){ toast("Sila upload Sijil (PNG/JPG) dahulu (di bawah MP3)."); return; } $("#certPane").style.display='block'; renderCert(); });
 $("#closeMusic").addEventListener("click",()=>{ try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch{} $("#celebrate").classList.remove("show"); });
 
@@ -266,7 +316,7 @@ function renderCert(){
     cg.fillStyle="#333"; cg.font="700 100px system-ui"; cg.textAlign="center";
     cg.fillText("Sila upload Sijil (PNG/JPG) di bahagian atas.", W/2, H/2);
   }
-  // lukis tandatangan (strokes)
+  // lukis tandatangan
   cg.lineJoin="round"; cg.lineCap="round"; cg.strokeStyle="#111";
   for(const s of strokes){
     cg.beginPath();
@@ -304,7 +354,6 @@ certCanvas.addEventListener("pointercancel",endStroke);
 $("#undoSig").addEventListener("click",()=>{ strokes.pop(); renderCert(); });
 $("#clearSig").addEventListener("click",()=>{ strokes.length=0; renderCert(); });
 $("#backToWin").addEventListener("click",()=>{ $("#certPane").style.display='none'; });
-
 $("#savePNG").addEventListener("click",()=>{ renderCert(); const a=document.createElement("a"); a.download="Sijil_Tandatangan.png"; a.href=certCanvas.toDataURL("image/png"); a.click(); });
 
 /* ===== mula ===== */
