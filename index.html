@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jigsaw Puzzle Malaysia — Grid Rapat + Tray</title>
+<title>Jigsaw Puzzle Malaysia — Tray Kiri & Kanan</title>
 <style>
 :root{
   --bg:#0a2540; --panel:#0f3359; --line:#0b2846; --text:#eaf3ff; --accent:#ffd34d;
-  --grid:#123e70; --tray:#0b2a4a;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -36,9 +35,7 @@ canvas{position:absolute;inset:0}
 #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.65);color:#fff}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#123e70;color:#fff;border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;display:none;z-index:9}
 footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
-
-/* Tray info */
-.badge{position:absolute;left:16px;right:16px;bottom:14px;display:flex;justify-content:center;pointer-events:none;font-size:12px;color:#b8d3f0}
+.small{opacity:.85}
 </style>
 </head>
 <body>
@@ -79,12 +76,11 @@ footer{padding:10px 16px;color:#b8d3f0;font-size:12px}
       <p style="margin:0">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68.</p>
       <button id="againBtn" class="btn">Main Lagi</button>
     </div>
-    <div class="badge">Seret kepingan dari <strong>Tray</strong> (bahagian bawah) ke dalam kotak.</div>
   </section>
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Petak grid rapat (tiada jarak). Semua kepingan bermula di Tray. Lepaskan berhampiran petak untuk snap tepat.</footer>
+<footer class="small">Semua kepingan bermula di tray **kiri & kanan**. Seret ke dalam grid untuk snap. Grid rapat (tiada jarak).</footer>
 
 <audio id="bgm" preload="auto"></audio>
 
@@ -110,11 +106,12 @@ addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); 
 
 /* ===== state ===== */
 let img=null;
-let rows=3, cols=4, pieces=[], targets=[];
+let rows=3, cols=4;
+let pieces=[], targets=[];
 let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
 let dragging=null, offX=0, offY=0, showPreview=false, built=false;
-let trayY=0, trayH=0; // kawasan tray bawah
-const GRID_GAP=0;     // Rapat! tiada jarak antara petak
+let trayW=0, margin=18, gutter=12; // tray kiri/kanan
+const GRID_GAP=0; // rapat!
 
 /* ===== audio ===== */
 const bgm=$("#bgm");
@@ -158,27 +155,31 @@ $("#fsBtn").onclick=()=>{
 };
 document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh");
 
-/* ===== bina puzzle (grid rapat + tray bawah) ===== */
+/* ===== bina puzzle (grid rapat + tray kiri/kanan) ===== */
 function buildPuzzle(){
   pieces=[]; targets=[]; built=true;
 
-  // ruang grid (atas), tray (bawah)
-  const margin=18, trayMin=150;
-  const usableW=W-margin*2, usableH=H-margin*2;
-  // perkadaran: 72% grid, 28% tray (min 150px)
-  trayH=Math.max(trayMin, Math.round(usableH*0.28));
-  trayY=H - margin - trayH;
-  const gridH = usableH - trayH - 12; // 12px ruang antara grid & tray
-  const gridW = usableW;
+  // 1) Kira CELL dari ketinggian dahulu (supaya semua muat)
+  const usableH = H - margin*2;
+  let cellFromH = Math.floor(usableH / rows);
+  // trayW bergantung CELL (supaya kepingan tray sama saiz dgn grid)
+  let tmpTrayW = Math.max( Math.round(cellFromH + 22), Math.round(W*0.12) );
 
-  // kira saiz sel (petak empat segi tepat, rapat)
-  CELL = Math.floor(Math.min(gridW/cols, gridH/rows));
+  // ruang grid maksimum mengikut lebar
+  const usableW = W - margin*2 - 2*tmpTrayW - 2*gutter;
+  let cellFromW = Math.floor(usableW / cols);
+  CELL = Math.min(cellFromH, cellFromW);
+  if(CELL<24) CELL=24; // had minimum
+
+  // kira semula trayW berdasarkan CELL sebenar
+  trayW = Math.max(Math.round(CELL + 22), Math.round(W*0.12));
+
   GRID_W = CELL*cols + GRID_GAP*(cols-1);
   GRID_H = CELL*rows + GRID_GAP*(rows-1);
-  OX = Math.round((W-GRID_W)/2);
-  OY = Math.round(margin + (gridH - GRID_H)/2);
+  OX = Math.round(margin + trayW + gutter + ( (W - 2*(trayW+gutter) - margin*2) - GRID_W )/2);
+  OY = Math.round(margin + (usableH - GRID_H)/2);
 
-  // potong imej ke kepingan petak
+  // 2) Potong imej mengikut grid
   const sW = img.width/cols, sH = img.height/rows;
 
   for(let r=0;r<rows;r++){
@@ -187,34 +188,21 @@ function buildPuzzle(){
       const ty = OY + r*(CELL+GRID_GAP);
       const sx = c*sW, sy=r*sH;
 
-      // buat kanvas kepingan
       const can=document.createElement('canvas');
-      can.width = CELL*2; can.height=CELL*2; // HiDPI
-      const g=can.getContext('2d');
-      g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+      can.width = CELL*2; can.height=CELL*2;
+      const g=can.getContext('2d'); g.scale(2,2);
+      g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
 
-      // bingkai lembut
       const radius = Math.max(6, CELL*0.06);
-      g.save();
-      g.beginPath();
-      roundedRect(g, 0,0, CELL, CELL, radius);
-      g.clip();
+      g.save(); g.beginPath(); roundedRect(g, 0,0, CELL, CELL, radius); g.clip();
       g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
       g.restore();
 
-      // stroke hanya ketika terapung (dilukis dalam draw)
-      pieces.push({
-        r, c,
-        x: tx, y: ty, // target (untuk kemenangan)
-        w: CELL, h: CELL,
-        img: can,
-        at:{x:0,y:0}, // lokasi semasa (diisi ketika shuffle)
-        placed:false
-      });
+      pieces.push({r,c, x:tx, y:ty, w:CELL, h:CELL, img:can, at:{x:0,y:0}, placed:false});
       targets.push({x:tx,y:ty,r,c});
     }
   }
-  shuffle();
+  shuffle(); // susun dalam tray kiri/kanan
 }
 
 function roundedRect(c,x,y,w,h,r){
@@ -227,31 +215,59 @@ function roundedRect(c,x,y,w,h,r){
   c.closePath();
 }
 
-/* ===== susun ke tray ===== */
+/* ===== susun ke tray kiri & kanan ===== */
 function shuffle(){
   if(!built) return;
-  // letak semua kepingan rawak di tray (bawah)
-  const pad=12;
-  const colsTray = Math.max(1, Math.floor((W - pad*2) / (CELL + 8)));
-  let cx=0, cy=0;
-  for(const p of pieces){
-    const col = cx % colsTray;
-    const row = Math.floor(cx / colsTray);
-    const px = pad + col*(CELL+8);
-    const py = trayY + pad + row*(CELL+8);
-    p.at.x = px;
-    p.at.y = py;
-    p.placed=false;
-    cx++;
+  const pad=12, gap=8;
+
+  // jumlah secara seimbang untuk kiri/kanan
+  const total=pieces.length;
+  const halfLeft = Math.ceil(total/2);
+  const halfRight = total - halfLeft;
+
+  // berapa baris muat secara menegak?
+  const maxRows = Math.max(1, Math.floor( (H - margin*2 - pad*2) / (CELL + gap) ));
+  const colsLeft  = Math.max(1, Math.ceil(halfLeft  / maxRows));
+  const colsRight = Math.max(1, Math.ceil(halfRight / maxRows));
+
+  // sesuaikan trayW jika perlu (pastikan semua muat) — tetapi kekalkan grid
+  const needLeftW  = pad*2 + colsLeft  * CELL + (colsLeft-1)*gap;
+  const needRightW = pad*2 + colsRight * CELL + (colsRight-1)*gap;
+  trayW = Math.max(trayW, needLeftW, needRightW);
+
+  // posisi pangkal tray
+  const leftX  = Math.round(margin);
+  const rightX = Math.round(W - margin - trayW);
+
+  // letak kiri
+  let i=0;
+  for(; i<halfLeft; i++){
+    const c = i % colsLeft, r = Math.floor(i / colsLeft);
+    pieces[i].at.x = leftX + pad + c*(CELL+gap);
+    pieces[i].at.y = Math.round(margin + pad + r*(CELL+gap));
+    pieces[i].placed=false;
   }
+  // letak kanan
+  for(let k=0; k<halfRight; k++){
+    const idx = i+k;
+    const c = k % colsRight, r = Math.floor(k / colsRight);
+    pieces[idx].at.x = rightX + pad + c*(CELL+gap);
+    pieces[idx].at.y = Math.round(margin + pad + r*(CELL+gap));
+    pieces[idx].placed=false;
+  }
+
   draw();
 }
 
 /* ===== lukis ===== */
 function draw(){
-  // latar papan
+  // latar
   ctx.fillStyle= '#071a2f';
   ctx.fillRect(0,0,W,H);
+
+  // tray kiri & kanan
+  drawTray(Math.round(margin), Math.round(margin), Math.round(trayW), H - margin*2);
+  drawTray(Math.round(W - margin - trayW), Math.round(margin), Math.round(trayW), H - margin*2);
 
   // grid area
   ctx.save();
@@ -261,69 +277,47 @@ function draw(){
   ctx.beginPath(); ctx.rect(OX-8, OY-8, GRID_W+16, GRID_H+16); ctx.fill(); ctx.stroke();
   ctx.restore();
 
-  // preview dalam grid
+  // preview (dalam grid sahaja)
   if(showPreview && img){
-    ctx.save(); ctx.globalAlpha=0.25; ctx.drawImage(img, 0,0,img.width,img.height, OX,OY, GRID_W,GRID_H); ctx.restore();
-  }
-
-  // garisan halus antara petak (boleh set ke 0 untuk betul2 rapat)
-  if(GRID_GAP>0){
-    ctx.save();
-    ctx.strokeStyle='rgba(255,255,255,.06)';
-    ctx.lineWidth=GRID_GAP;
-    for(let i=1;i<cols;i++){
-      const x=OX+i*CELL + (i-1)*GRID_GAP + GRID_GAP/2;
-      ctx.beginPath(); ctx.moveTo(x,OY); ctx.lineTo(x,OY+GRID_H); ctx.stroke();
-    }
-    for(let j=1;j<rows;j++){
-      const y=OY+j*CELL + (j-1)*GRID_GAP + GRID_GAP/2;
-      ctx.beginPath(); ctx.moveTo(OX,y); ctx.lineTo(OX+GRID_W,y); ctx.stroke();
-    }
+    ctx.save(); ctx.globalAlpha=0.25;
+    ctx.drawImage(img, 0,0,img.width,img.height, OX,OY, GRID_W,GRID_H);
     ctx.restore();
   }
 
-  // tray bawah
+  // kepingan: belum placed (stroke) → dragging → placed (tanpa stroke)
+  for(const p of pieces){ if(p===dragging || p.placed) continue; drawPiece(p,true); }
+  if(dragging) drawPiece(dragging,true,true);
+  for(const p of pieces){ if(!p.placed || p===dragging) continue; drawPiece(p,false); }
+}
+
+function drawTray(x,y,w,h){
   ctx.save();
   ctx.fillStyle= 'rgba(11,42,74,.95)';
   ctx.strokeStyle='rgba(255,255,255,.08)';
   ctx.lineWidth=1;
-  ctx.beginPath(); ctx.rect(10, trayY, W-20, trayH-6); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
   ctx.restore();
-
-  // lukis semua kepingan: yang belum placed (dengan stroke) → dragging → placed (tanpa stroke)
-  for(const p of pieces){
-    if(p===dragging || p.placed) continue;
-    drawPiece(p, true);
-  }
-  if(dragging) drawPiece(dragging, true, true);
-  for(const p of pieces){
-    if(!p.placed || p===dragging) continue;
-    drawPiece(p, false);
-  }
 }
 
 function drawPiece(p, floating, lift){
-  const x = (p===dragging? p.at.x : p.at.x);
-  const y = (p===dragging? p.at.y : p.at.y);
   if(floating){
-    // bayang & stroke putih halus ketika di luar grid
     ctx.save();
     if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
-    ctx.drawImage(p.img, Math.round(x), Math.round(y), p.w, p.h);
+    ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h);
     ctx.restore();
 
     ctx.save();
     ctx.lineWidth=Math.max(1.2, p.w*0.04);
     ctx.strokeStyle='rgba(255,255,255,.95)';
-    ctx.beginPath(); roundedRect(ctx, Math.round(x), Math.round(y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
+    ctx.beginPath(); roundedRect(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
     ctx.restore();
 
     ctx.save();
     ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.22)';
-    ctx.beginPath(); roundedRect(ctx, Math.round(x), Math.round(y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
+    ctx.beginPath(); roundedRect(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h, Math.max(6,p.w*0.06)); ctx.stroke();
     ctx.restore();
   }else{
-    // dalam grid: tiada stroke, rapat
+    // dalam grid: tiada stroke supaya sambungan licin
     ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h);
   }
 }
@@ -355,7 +349,6 @@ board.addEventListener("pointerup",e=>{
   if(!dragging) return; e.preventDefault();
   const p=dragging; dragging=null;
 
-  // jika dilepaskan berhampiran mana2 petak target → snap tepat
   const snap = findNearestTarget(p.at.x + p.w/2, p.at.y + p.h/2);
   if(snap && !occupied(snap.r, snap.c)){
     p.at.x = snap.x; p.at.y = snap.y;
@@ -365,14 +358,11 @@ board.addEventListener("pointerup",e=>{
 },{passive:false});
 
 function findNearestTarget(cx,cy){
-  // cepat: jika pointer berada dalam area grid, terus kira indeks
   if(cx>=OX && cx<=OX+GRID_W && cy>=OY && cy<=OY+GRID_H){
     const c = Math.floor((cx - OX) / (CELL+GRID_GAP));
     const r = Math.floor((cy - OY) / (CELL+GRID_GAP));
-    const idx = r*cols + c;
-    return targets[idx];
+    return targets[r*cols + c];
   }
-  // jika luar grid, pulangkan null
   return null;
 }
 function occupied(rr,cc){
@@ -381,9 +371,7 @@ function occupied(rr,cc){
 
 /* ===== menang ===== */
 function checkWin(){
-  for(const p of pieces){
-    if(!(p.at.x===p.x && p.at.y===p.y)) return;
-  }
+  for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; }
   $("#win").style.display="flex";
   if(autoMusic && bgm.src){ bgm.currentTime=0; bgm.play().catch(()=>{}); }
 }
