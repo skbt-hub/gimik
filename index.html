@@ -3,12 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Auto Snap & Auto Music (FIX)</title>
+<title>Puzzle Malaysia — Auto Snap & Auto Music (FIX r,c)</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
 .controls{display:flex;flex-wrap:wrap;gap:8px}
 .btn,.select,.file,.range{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
@@ -30,8 +29,7 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 #celebrate.show{display:flex;animation:fadeIn .45s ease both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .big-wrap{width:min(96%,1200px);max-height:80vh;display:grid;place-items:center;padding:10px}
-.big-img{width:100%;max-height:70vh;object-fit:contain;border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 2px rgba(255,255,255,.08);background:#061a2e}
+.big-img{width:100%;max-height:70vh;object-fit:contain;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 2px rgba(255,255,255,.08);background:#061a2e}
 .title{margin-top:14px;text-align:center;line-height:1.25;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 8px rgba(0,0,0,.7)}
 .title .line1{font-size:min(5.5vw,38px)}
 .title .line2{font-size:min(5vw,34px);color:var(--accent)}
@@ -96,7 +94,7 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Auto: bunyi snap (mp3/wav) bila tepat & lagu kemenangan bila gambar besar muncul.</footer>
+<footer>Auto: bunyi snap bila tepat (ikut slot r,c) & lagu kemenangan bila gambar besar muncul.</footer>
 
 <!-- Audio tersembunyi -->
 <audio id="bgm" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
@@ -120,17 +118,14 @@ function resizeCanvas(){
   board.style.width=W+"px"; board.style.height=H+"px";
   board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0);
-  draw(); // lukis papan kosong/tray
+  draw();
 }
-window.addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
+addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
 
 /* ===== state ===== */
-let img=null;              // imej sumber
-let rows=3, cols=4;        // konfigurasi grid
-let pieces=[];             // senarai kepingan
-let targets=[];            // posisi sasaran grid
-let OX=0, OY=0, CELL=0;    // offset grid & saiz sel
-let GRID_W=0, GRID_H=0;    // dimensi grid
+let img=null; let rows=3, cols=4;
+let pieces=[]; let targets=[];
+let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
 let dragging=null, offX=0, offY=0;
 let showPreview=false, built=false;
 let trayW=0, margin=14, gutter=10;
@@ -142,94 +137,60 @@ $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
 $("#mp3Input").addEventListener("change", e=>{
   const f=e.target.files?.[0]; if(!f){ toast("Tiada fail muzik dipilih."); return; }
-  try{
-    if(mp3URL) URL.revokeObjectURL(mp3URL);
-    mp3URL = URL.createObjectURL(f);
-    bgm.src = mp3URL; bgm.load(); bgm.loop=true;
-    $("#mp3Name").textContent = "• " + f.name;
-    toast("Muzik kemenangan dimuat naik.");
-  }catch{ toast("Gagal memuat muzik."); }
+  if(mp3URL) URL.revokeObjectURL(mp3URL);
+  mp3URL = URL.createObjectURL(f);
+  bgm.src = mp3URL; bgm.load(); bgm.loop=true;
+  $("#mp3Name").textContent = "• " + f.name;
+  toast("Muzik kemenangan dimuat naik.");
 });
 
-/* ===== SFX Snap (WebAudio + fallback) ===== */
+/* ===== SFX Snap (WebAudio + fallback, dengan cooldown) ===== */
 let audioCtx=null, snapBuffer=null, sfxVol=0.9;
-let sfxMode='default'; // 'buffer' | 'element' | 'default'
-let sfxURL=null;
-const sfxEl=$("#sfxEl");
+let sfxMode='default'; let sfxURL=null; const sfxEl=$("#sfxEl");
+let lastSnapAt=0;
 function ensureAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
 function resumeCtx(){ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }
-function makeDefaultSnapBuffer(){
-  ensureAudioCtx();
-  const dur=0.10, rate=audioCtx.sampleRate, len=Math.floor(dur*rate);
-  const buf=audioCtx.createBuffer(1,len,rate);
-  const data=buf.getChannelData(0);
-  for(let i=0;i<len;i++){ const t=i/len; data[i]=(Math.random()*2-1)*Math.pow(1-t,5)*0.7; }
-  return buf;
-}
+function makeDefaultSnapBuffer(){ ensureAudioCtx(); const dur=0.10, rate=audioCtx.sampleRate, len=Math.floor(dur*rate);
+  const buf=audioCtx.createBuffer(1,len,rate), data=buf.getChannelData(0);
+  for(let i=0;i<len;i++){ const t=i/len; data[i]=(Math.random()*2-1)*Math.pow(1-t,5)*0.7; } return buf; }
 function playSnap(){
-  // cuba WebAudio dahulu
+  const now=(performance&&performance.now)?performance.now():Date.now();
+  if(now-lastSnapAt<120) return; lastSnapAt=now; // cooldown 120ms
+
   if(sfxMode==='buffer' && snapBuffer && audioCtx){
-    resumeCtx();
-    const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
-    const g=audioCtx.createGain(); g.gain.value=sfxVol;
-    src.connect(g).connect(audioCtx.destination); src.start();
-    return;
+    resumeCtx(); const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
+    const g=audioCtx.createGain(); g.gain.value=sfxVol; src.connect(g).connect(audioCtx.destination); src.start(); return;
   }
-  // fallback <audio>
-  if(sfxMode==='element' && sfxURL){
-    const a=new Audio(sfxURL); a.volume=sfxVol; a.play().catch(()=>{});
-    return;
-  }
-  // default noise
-  ensureAudioCtx(); resumeCtx();
-  if(!snapBuffer) snapBuffer=makeDefaultSnapBuffer();
-  const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
-  const g=audioCtx.createGain(); g.gain.value=sfxVol;
-  src.connect(g).connect(audioCtx.destination); src.start();
-  sfxMode='default';
+  if(sfxMode==='element' && sfxURL){ const a=new Audio(sfxURL); a.volume=sfxVol; a.play().catch(()=>{}); return; }
+  ensureAudioCtx(); resumeCtx(); if(!snapBuffer) snapBuffer=makeDefaultSnapBuffer();
+  const src=audioCtx.createBufferSource(); src.buffer=snapBuffer; const g=audioCtx.createGain(); g.gain.value=sfxVol;
+  src.connect(g).connect(audioCtx.destination); src.start(); sfxMode='default';
 }
 $("#sfxVol").addEventListener("input",e=>{ sfxVol=+e.target.value; sfxEl.volume=sfxVol; });
-$("#sfxInput").addEventListener("change",async (e)=>{
+$("#sfxInput").addEventListener("change",async e=>{
   const f=e.target.files?.[0]; if(!f){ $("#sfxName").textContent=""; sfxMode='default'; return; }
   $("#sfxName").textContent="• Memuat SFX…";
   try{
-    // sediakan URL fallback
     if(sfxURL) URL.revokeObjectURL(sfxURL);
-    sfxURL = URL.createObjectURL(f);
-    sfxEl.src=sfxURL; sfxEl.load(); sfxEl.volume=sfxVol;
-
-    // cuba decode ke WebAudio
-    ensureAudioCtx();
-    const arr=await f.arrayBuffer();
-    const buf=await audioCtx.decodeAudioData(arr);
-    snapBuffer=buf; sfxMode='buffer';
-    $("#sfxName").textContent="• Bunyi snap siap (WebAudio)";
-    toast("SFX snap dimuat (kualiti tinggi).");
+    sfxURL = URL.createObjectURL(f); sfxEl.src=sfxURL; sfxEl.load(); sfxEl.volume=sfxVol;
+    ensureAudioCtx(); const arr=await f.arrayBuffer(); const buf=await audioCtx.decodeAudioData(arr);
+    snapBuffer=buf; sfxMode='buffer'; $("#sfxName").textContent="• Bunyi snap siap (WebAudio)"; toast("SFX snap dimuat.");
   }catch(err){
-    console.warn('SFX decode gagal, guna fallback audio element', err);
-    snapBuffer=null; sfxMode='element';
-    $("#sfxName").textContent="• Bunyi snap siap (Fallback)";
-    toast("SFX guna fallback — masih berbunyi.");
+    console.warn('Decode SFX gagal → fallback', err);
+    snapBuffer=null; sfxMode='element'; $("#sfxName").textContent="• Bunyi snap siap (Fallback)"; toast("SFX guna fallback.");
   }
 });
 
 /* ===== controls ===== */
 const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
-$("#piecesSel").addEventListener("change",e=>{
-  const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle();
-});
+$("#piecesSel").addEventListener("change",e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); });
 $("#previewBtn").addEventListener("click",function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); });
 $("#startBtn").addEventListener("click",()=>{ if(!img) return toast("Muat naik gambar dahulu."); buildPuzzle(); });
 $("#shuffleBtn").addEventListener("click",()=>shuffle());
-
 $("#imgInput").addEventListener("change",e=>{
   const f=e.target.files?.[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=ev=>{
-    img=new Image();
-    img.onload=()=>{ $("#celebrateImg").src=img.src; buildPuzzle(); };
-    img.src=ev.target.result;
-  };
+  r.onload=ev=>{ img=new Image(); img.onload=()=>{ $("#celebrateImg").src=img.src; buildPuzzle(); }; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
 
@@ -245,6 +206,7 @@ document.addEventListener("fullscreenchange",()=>$("#fsBtn").textContent=isFS()?
 
 /* ===== helper ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
+function isCorrectTarget(piece, targetCell){ return !!targetCell && piece.r===targetCell.r && piece.c===targetCell.c; }
 
 /* ===== bina puzzle (grid besar + tray kiri/kanan) ===== */
 function buildPuzzle(){
@@ -278,24 +240,19 @@ function buildPuzzle(){
   OY = Math.round(margin + (usableH - GRID_H)/2);
 
   const sW = img.width/cols, sH = img.height/rows;
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      const tx = OX + c*CELL;
-      const ty = OY + r*CELL;
-      const sx = c*sW, sy=r*sH;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const tx = OX + c*CELL, ty = OY + r*CELL;
+    const sx = c*sW, sy=r*sH;
 
-      const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
-      const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
+    const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    rectPath(g,0,0,CELL,CELL); g.clip();
+    g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
 
-      rectPath(g,0,0,CELL,CELL); g.clip();
-      g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
-
-      pieces.push({r,c,x:tx,y:ty,w:CELL,h:CELL,img:can,at:{x:0,y:0},placed:false});
-      targets.push({x:tx,y:ty,r,c});
-    }
+    pieces.push({r,c,x:tx,y:ty,w:CELL,h:CELL,img:can,at:{x:0,y:0},placed:false});
+    targets.push({x:tx,y:ty,r,c});
   }
-  shuffle();
-  draw(); // pastikan kelihatan selepas build
+  shuffle(); draw();
 }
 
 /* ===== letak kepingan di tray kiri/kanan ===== */
@@ -326,14 +283,10 @@ function shuffle(){
 
 /* ===== lukis papan & kepingan ===== */
 function draw(){
-  // latar
   ctx.fillStyle='#071a2f'; ctx.fillRect(0,0,W,H);
-
-  // tray kiri/kanan
   drawTray(Math.round(margin),Math.round(margin),Math.round(trayW),H-margin*2);
   drawTray(Math.round(W-margin-trayW),Math.round(margin),Math.round(trayW),H-margin*2);
 
-  // grid tengah
   ctx.save(); ctx.fillStyle='#061a2e'; ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.rect(OX-8||0, OY-8||0, (GRID_W||0)+16, (GRID_H||0)+16); ctx.fill(); ctx.stroke(); ctx.restore();
 
@@ -342,12 +295,8 @@ function draw(){
     ctx.drawImage(img,0,0,img.width,img.height, OX,OY, GRID_W,GRID_H);
     ctx.restore();
   }
-
-  // kepingan di tray
   for(const p of pieces){ if(p===dragging || p.placed) continue; drawPiece(p,true); }
-  // kepingan drag
   if(dragging) drawPiece(dragging,true,true);
-  // kepingan yang sudah ditempatkan (dilukis terakhir supaya 'di bawah' outline)
   for(const p of pieces){ if(!p.placed || p===dragging) continue; drawPiece(p,false); }
 }
 function drawTray(x,y,w,h){
@@ -358,10 +307,8 @@ function drawPiece(p,floating,lift){
   if(floating){
     ctx.save(); if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
     ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.restore();
-
     ctx.save(); ctx.lineWidth=Math.max(1.1,p.w*0.04); ctx.strokeStyle='rgba(255,255,255,.95)';
     rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
-
     ctx.save(); ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.20)';
     rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
   }else{
@@ -395,13 +342,18 @@ board.addEventListener("pointermove",e=>{
 
 board.addEventListener("pointerup",e=>{
   if(!dragging) return; e.preventDefault();
-  const p=dragging; dragging=null;
+  const p = dragging; dragging = null;
 
-  const snap=findNearestTarget(p.at.x+p.w/2, p.at.y+p.h/2);
-  if(snap && !occupied(snap.r,snap.c)){
-    p.at.x=snap.x; p.at.y=snap.y;
-    p.placed=(p.x===snap.x && p.y===snap.y);
-    if(p.placed) playSnap(); // bunyi snap bila tepat
+  const snap = findNearestTarget(p.at.x + p.w/2, p.at.y + p.h/2);
+  if(snap && !occupied(snap.r, snap.c)){
+    p.at.x = snap.x; p.at.y = snap.y;
+
+    const wasPlaced = !!p.placed;
+    p.placed = isCorrectTarget(p, snap);   // semak ikut (r,c)
+
+    if(!wasPlaced && p.placed){            // hanya bila baru jadi betul
+      playSnap();
+    }
   }
   draw(); checkWin();
 },{passive:false});
@@ -424,8 +376,7 @@ function checkWin(){
   if(bgm.src){
     try{
       bgm.currentTime=0; bgm.loop=true;
-      const pr=bgm.play();
-      if(pr && typeof pr.then==="function"){ pr.catch(()=>{}); }
+      const pr=bgm.play(); if(pr && typeof pr.then==="function"){ pr.catch(()=>{}); }
     }catch(_){}
   }
 }
@@ -434,9 +385,7 @@ function checkWin(){
 $("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); shuffle(); draw(); });
 
 /* ===== mula ===== */
-resizeCanvas(); // sediakan kanvas
-// Jika nak papar grid kosong walaupun belum ada gambar, boleh letak img placeholder.
-
+resizeCanvas();
 </script>
 </body>
 </html>
