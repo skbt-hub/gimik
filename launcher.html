@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Puzzle Kebangsaan — Launcher</title>
+
+  <!-- iOS web app fullscreen -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Puzzle Kebangsaan">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <!-- Ikon Home Screen (ambil dari fail yang cikgu dah upload) -->
+  <link rel="apple-touch-icon" href="puzlab.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="puzlab.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="puzlab.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="puzlab.png">
+
+  <!-- Redirect PANTAS ke halaman puzzle sebenar -->
+  <!-- GANTIKAN URL di bawah dengan URL puzzle cikgu -->
+  <meta http-equiv="refresh" content="0;url=./index.html">
+  <script>
+    // fallback jika meta refresh di-block
+    location.replace("./index.html"); // ganti dengan URL sebenar jika lain
+  </script>
+
+  <style>
+    html,body{height:100%;margin:0;background:#0a2540;color:#eaf3ff;
+      display:grid;place-items:center;font-family:system-ui}
+    .box{opacity:.85;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="box">
+    Membuka aplikasi…<br/>Jika tidak auto buka, <a href="./index.html">tekan di sini</a>.
+  </div>
+</body>
+</html>
