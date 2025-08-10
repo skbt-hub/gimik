@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Kemenangan + MP3 + SFX Snap</title>
+<title>Puzzle Malaysia — Auto MP3 & Auto Snap</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(180deg,#123e70,#0f3359);border-bottom:2px solid var(--line)}
 .controls{display:flex;flex-wrap:wrap;gap:8px}
 .btn,.select,.file,.range{background:var(--panel);color:var(--text);border:1px solid #1a4d82;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
@@ -25,24 +26,19 @@ canvas{position:absolute;inset:0}
 footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
 
 /* Paparan kemenangan */
-#celebrate{
-  position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column;
-  background:rgba(0,0,0,.85); z-index:20;
-}
-#celebrate.show{display:flex; animation:fadeIn .5s ease both;}
+#celebrate{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,0,0,.85);z-index:20}
+#celebrate.show{display:flex;animation:fadeIn .45s ease both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.big-wrap{width:min(96%,1200px); max-height:80vh; display:grid; place-items:center; padding:10px;}
-.big-img{
-  width:100%; max-height:70vh; object-fit:contain; border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.08);
-  background:#061a2e;
-}
-.title{margin-top:14px; text-align:center; line-height:1.25; font-weight:800; letter-spacing:.5px; text-shadow:0 2px 8px rgba(0,0,0,.7);}
+.big-wrap{width:min(96%,1200px);max-height:80vh;display:grid;place-items:center;padding:10px}
+.big-img{width:100%;max-height:70vh;object-fit:contain;border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 2px rgba(255,255,255,.08);background:#061a2e}
+.title{margin-top:14px;text-align:center;line-height:1.25;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 8px rgba(0,0,0,.7)}
 .title .line1{font-size:min(5.5vw,38px)}
-.title .line2{font-size:min(5vw,34px); color:var(--accent)}
-.actions{display:flex; gap:10px; margin-top:16px}
+.title .line2{font-size:min(5vw,34px);color:var(--accent)}
+.actions{display:flex;gap:10px;margin-top:16px}
 .actions .btn{background:#ffd34d;color:#1e2125;border-color:#c9a43c;font-weight:700}
 .small{opacity:.85}
+.status{font-size:12px;opacity:.9}
 </style>
 </head>
 <body>
@@ -63,18 +59,19 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="fsBtn" class="btn">Skrin Penuh</button>
 
-    <!-- Muzik MP3 -->
+    <!-- Muzik kemenangan -->
     <label class="file">Muzik MP3
       <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3,audio/mp4,audio/aac,audio/x-m4a,audio/wav,audio/ogg">
     </label>
     <span id="mp3Name" class="small"></span>
-    <button id="musicPlay"  class="btn" disabled>Main Muzik</button>
-    <button id="musicPause" class="btn" disabled>Henti Muzik</button>
-    <div class="range">Volum <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
+    <div class="range">Vol Muzik <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
 
     <!-- SFX Snap -->
-    <label class="file">Bunyi Snap <input id="sfxInput" type="file" accept="audio/*"></label>
-    <div class="range">Vol SFX <input id="sfxVol" type="range" min="0" max="1" step="0.05" value="0.8"></div>
+    <label class="file">Bunyi Snap
+      <input id="sfxInput" type="file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp3,audio/ogg,audio/*">
+    </label>
+    <span id="sfxName" class="status"></span>
+    <div class="range">Vol Snap <input id="sfxVol" type="range" min="0" max="1" step="0.05" value="0.9"></div>
   </div>
 </header>
 
@@ -93,17 +90,17 @@ footer{padding:10px 14px;color:#b8d3f0;font-size:12px}
       </div>
       <div class="actions">
         <button id="againBtn" class="btn">Main Lagi</button>
-        <button id="tapToPlay" class="btn" style="display:none">Mainkan Lagu</button>
       </div>
     </div>
   </section>
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Snap SFX bila kepingan tepat. Kemenangan: gambar besar + teks. Lagu MP3 auto main (jika dimuat naik).</footer>
+<footer>Auto: bunyi snap (mp3/wav) bila tepat & lagu kemenangan bila gambar besar muncul.</footer>
 
 <!-- Audio tersembunyi -->
-<audio id="bgm" preload="metadata" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
+<audio id="bgm" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
+<audio id="sfxEl" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
 
 <script>
 /* ===== util ===== */
@@ -133,57 +130,88 @@ let dragging=null, offX=0, offY=0, showPreview=false, built=false;
 let trayW=0, margin=14, gutter=10;
 const GRID_GAP=0;
 
-/* ===== audio: Muzik ===== */
+/* ===== Muzik kemenangan ===== */
 const bgm=$("#bgm"); let mp3URL=null;
 $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
 $("#mp3Input").addEventListener("change", e=>{
-  const f=e.target.files && e.target.files[0]; if(!f){ toast("Tiada fail dipilih."); return; }
+  const f=e.target.files?.[0]; if(!f){ toast("Tiada fail muzik dipilih."); return; }
   try{
     if(mp3URL) URL.revokeObjectURL(mp3URL);
     mp3URL = URL.createObjectURL(f);
-    bgm.src = mp3URL; bgm.load();
+    bgm.src = mp3URL; bgm.load(); bgm.loop=true;
     $("#mp3Name").textContent = "• " + f.name;
-    $("#musicPlay").disabled = $("#musicPause").disabled = false;
-    toast("MP3 dimuat naik: "+f.name);
-  }catch{ toast("Gagal memuat MP3."); }
+    toast("Muzik kemenangan dimuat naik.");
+  }catch{ toast("Gagal memuat muzik."); }
 });
-$("#musicPlay").onclick=async ()=>{ if(!bgm.src) return toast("Muat naik MP3 dahulu."); try{ bgm.loop=true; await bgm.play(); }catch{ toast("Tekan sekali lagi untuk main."); } };
-$("#musicPause").onclick=()=> bgm.pause();
 
-/* ===== audio: SFX Snap (WebAudio) ===== */
-let audioCtx=null, snapBuffer=null, sfxVol=0.8;
+/* ===== SFX Snap (WebAudio + fallback) ===== */
+let audioCtx=null, snapBuffer=null, sfxVol=0.9;
+let sfxMode='default'; // 'buffer' | 'element' | 'default'
+let sfxURL=null;
+const sfxEl=$("#sfxEl");
+
 function ensureAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
 function resumeCtx(){ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }
 function makeDefaultSnapBuffer(){
   ensureAudioCtx();
-  const dur=0.12, rate=audioCtx.sampleRate, len=Math.floor(dur*rate);
+  const dur=0.10, rate=audioCtx.sampleRate, len=Math.floor(dur*rate);
   const buf=audioCtx.createBuffer(1,len,rate);
   const data=buf.getChannelData(0);
-  for(let i=0;i<len;i++){ const t=i/len; data[i]=(Math.random()*2-1)*Math.pow(1-t,4)*0.6; }
+  for(let i=0;i<len;i++){ const t=i/len; data[i]=(Math.random()*2-1)*Math.pow(1-t,5)*0.7; }
   return buf;
 }
 function playSnap(){
+  // cuba main melalui WebAudio dulu
+  if(sfxMode==='buffer' && snapBuffer && audioCtx){
+    resumeCtx();
+    const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
+    const g=audioCtx.createGain(); g.gain.value=sfxVol;
+    src.connect(g).connect(audioCtx.destination); src.start();
+    return;
+  }
+  // fallback elemen <audio>
+  if(sfxMode==='element' && sfxURL){
+    const a=new Audio(sfxURL); a.volume=sfxVol; a.play().catch(()=>{});
+    return;
+  }
+  // default noise kalau tiada fail
   ensureAudioCtx(); resumeCtx();
   if(!snapBuffer) snapBuffer = makeDefaultSnapBuffer();
   const src=audioCtx.createBufferSource(); src.buffer=snapBuffer;
   const g=audioCtx.createGain(); g.gain.value=sfxVol;
   src.connect(g).connect(audioCtx.destination); src.start();
+  sfxMode='default';
 }
-$("#sfxVol").addEventListener("input",e=> sfxVol=+e.target.value);
+$("#sfxVol").addEventListener("input",e=>{ sfxVol=+e.target.value; sfxEl.volume=sfxVol; });
+
 $("#sfxInput").addEventListener("change",async (e)=>{
-  const f=e.target.files?.[0]; if(!f) return;
+  const f=e.target.files?.[0]; if(!f){ $("#sfxName").textContent=""; sfxMode='default'; return; }
+  $("#sfxName").textContent="• Memuat SFX…";
   try{
+    // URL untuk fallback
+    if(sfxURL) URL.revokeObjectURL(sfxURL);
+    sfxURL = URL.createObjectURL(f);
+    sfxEl.src = sfxURL; sfxEl.load(); sfxEl.volume=sfxVol;
+
+    // Cuba decode ke WebAudio (mp3/wav/ogg)
     ensureAudioCtx();
     const arr = await f.arrayBuffer();
-    snapBuffer = await audioCtx.decodeAudioData(arr);
-    toast("Bunyi snap dimuat naik.");
-  }catch{ toast("Fail SFX tak disokong. Cuba .wav / .mp3 / .m4a"); }
+    const buf = await audioCtx.decodeAudioData(arr);
+    snapBuffer = buf; sfxMode='buffer';
+    $("#sfxName").textContent="• Bunyi snap siap (WebAudio)";
+    toast("SFX snap dimuat (kualiti tinggi).");
+  }catch(err){
+    console.warn('SFX decode gagal, guna fallback audio element', err);
+    snapBuffer=null; sfxMode='element';
+    $("#sfxName").textContent="• Bunyi snap siap (Fallback)";
+    toast("SFX guna fallback — masih berbunyi.");
+  }
 });
 
 /* ===== controls ===== */
 $("#imgInput").addEventListener("change",e=>{
-  const f=e.target.files[0]; if(!f) return;
+  const f=e.target.files?.[0]; if(!f) return;
   const r=new FileReader();
   r.onload=ev=>{ img=new Image(); img.onload=()=>{ toast("Gambar dimuat naik."); buildPuzzle(); $("#celebrateImg").src=img.src; }; img.src=ev.target.result; };
   r.readAsDataURL(f);
@@ -281,7 +309,7 @@ function shuffle(){
   draw();
 }
 
-/* ===== lukis ===== */
+/* ===== lukis papan & kepingan ===== */
 function draw(){
   ctx.fillStyle='#071a2f'; ctx.fillRect(0,0,W,H);
 
@@ -306,14 +334,13 @@ function drawPiece(p,floating,lift){
     ctx.save(); if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
     ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.restore();
 
-    // stroke putih nipis ketika terapung (bukan dalam grid)
     ctx.save(); ctx.lineWidth=Math.max(1.1,p.w*0.04); ctx.strokeStyle='rgba(255,255,255,.95)';
     rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
 
     ctx.save(); ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.20)';
     rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
   }else{
-    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h); // seamless
+    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h);
   }
 }
 
@@ -325,9 +352,8 @@ function pieceAt(px,py){
 board.addEventListener("pointerdown",e=>{
   e.preventDefault();
   try{ board.setPointerCapture(e.pointerId); }catch(_){}
-  // aktifkan audio context bila ada interaksi
-  ensureAudioCtx(); resumeCtx();
-
+  // Aktifkan WebAudio upon user gesture (benarkan autoplay seterusnya)
+  try{ ensureAudioCtx(); resumeCtx(); }catch(_){}
   const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
   const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.at.x; offY=y-p.at.y;
   const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]); requestAnimationFrame(draw);
@@ -347,7 +373,7 @@ board.addEventListener("pointerup",e=>{
   if(snap && !occupied(snap.r,snap.c)){
     p.at.x=snap.x; p.at.y=snap.y;
     p.placed=(p.x===snap.x && p.y===snap.y);
-    if(p.placed) playSnap(); // *** Bunyi snap hanya bila tepat ***
+    if(p.placed) playSnap(); // Auto bunyi snap bila tepat
   }
   draw(); checkWin();
 },{passive:false});
@@ -360,25 +386,35 @@ function findNearestTarget(cx,cy){
 }
 function occupied(rr,cc){ return pieces.some(p=>p.placed && p.r===rr && p.c===cc); }
 
-/* ===== MENANG: paparkan gambar + main lagu ===== */
+/* ===== MENANG: gambar besar + auto muzik ===== */
 function checkWin(){
   for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; }
 
   $("#celebrateImg").src = img?.src || "";
   $("#celebrate").classList.add("show");
 
+  // Auto mainkan muzik kemenangan
   if(bgm.src){
-    bgm.currentTime=0; bgm.loop=true;
-    bgm.play().catch(()=>{ // iOS sekat autoplay
-      $("#tapToPlay").style.display='inline-block';
-      $("#tapToPlay").onclick=()=> bgm.play().then(()=> $("#tapToPlay").style.display='none');
-    });
+    try{
+      bgm.currentTime=0; bgm.loop=true;
+      // cuba main segera; dibenarkan kerana user telah berinteraksi (drag)
+      const playPromise = bgm.play();
+      if(playPromise && typeof playPromise.then==="function"){
+        playPromise.catch(()=>{/* jika pelayar sekat, abaikan diam² */});
+      }
+    }catch(_){}
   }
 }
+
+/* ===== semula ===== */
 $("#againBtn").onclick=()=>{ $("#celebrate").classList.remove("show"); shuffle(); };
 
 /* ===== init ===== */
 resizeCanvas();
+
+/* ===== data struktur ===== */
+let GRID_W=0, GRID_H=0, OX=0, OY=0, CELL=0;
+function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); } // memastikan fungsi tersedia
 </script>
 </body>
 </html>
