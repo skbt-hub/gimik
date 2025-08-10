@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Upload Sijil + Pergi ke Sijil</title>
+<title>Puzzle Malaysia — Sijil: Tandatangan Terus</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d;--muted:#b8d3f0}
 *{box-sizing:border-box}
@@ -41,11 +41,9 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 .cert-wrap{max-width:1180px;margin:0 auto;display:grid;gap:14px}
 .panel{background:#0f3359;border:1px solid #1a4d82;border-radius:12px;padding:12px}
 .cert-canvas-wrap{display:grid;place-items:center}
-#certCanvas{width:100%;max-width:1000px;background:#fff;border-radius:12px}
-
-/* Tandatangan */
-#signPad{width:100%;max-width:700px;background:#fff;border-radius:12px;border:2px dashed #c4d7f2;touch-action:none}
-.sign-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#certCanvas{width:100%;max-width:1000px;background:#fff;border-radius:12px;touch-action:none;cursor:crosshair}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.tools > div{display:flex;gap:8px;align-items:center}
 .chk{display:flex;align-items:center;gap:6px}
 </style>
 </head>
@@ -55,7 +53,7 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
   <div class="controls">
     <label class="file">Gambar <input id="imgInput" type="file" accept="image/*"></label>
 
-    <select id="piecesSel" class="select" title="Bilangan petak">
+    <select id="piecesSel" class="select">
       <option value="6">6 (2×3)</option><option value="8">8 (2×4)</option>
       <option value="10">10 (2×5)</option><option value="12" selected>12 (3×4)</option>
       <option value="16">16 (4×4)</option><option value="20">20 (4×5)</option>
@@ -67,14 +65,14 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
     <button id="previewBtn" class="toggle">Preview</button>
     <button id="fsBtn" class="btn">Skrin Penuh</button>
 
-    <!-- Muzik kemenangan -->
+    <!-- Muzik -->
     <label class="file">Muzik MP3
-      <input id="mp3Input" type="file" accept="audio/mpeg,audio/mp3,audio/mp4,audio/aac,audio/x-m4a,audio/wav,audio/ogg">
+      <input id="mp3Input" type="file" accept="audio/*">
     </label>
     <span id="mp3Name" style="opacity:.9"></span>
     <div class="range">Vol Muzik <input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
 
-    <!-- ⬇️ MINTA: Butang upload sijil ditempatkan DI SINI (bawah MP3) -->
+    <!-- Upload sijil DI SINI (bawah MP3) -->
     <label class="file">Sijil (PNG/JPG)
       <input id="certUpload" type="file" accept="image/*">
     </label>
@@ -96,36 +94,30 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
       </div>
       <div class="actions">
         <button id="againBtn" class="btn">Main Lagi</button>
-        <!-- ⬇️ MINTA: Butang ke sijil yang di-upload -->
         <button id="openCertWin" class="btn" style="background:#ffd34d;color:#1b1b1b;border-color:#c9a43c;font-weight:700">Pergi ke Sijil</button>
       </div>
     </div>
 
-    <!-- Paparan Sijil (guna template yang di-upload) -->
+    <!-- Paparan Sijil -->
     <div id="certPane">
       <div class="cert-wrap">
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <h2 style="margin:6px 0">Sijil — Tandatangan Guru Besar</h2>
-          <div style="display:flex;gap:8px">
-            <button id="backToWin" class="btn">← Kembali</button>
-            <button id="savePNG" class="btn" style="background:#ffd34d;color:#1b1b1b;border-color:#c9a43c;font-weight:700">Muat Turun PNG</button>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="sign-tools">
+        <div class="panel tools">
+          <div>
             <div class="chk"><input id="penOnly" type="checkbox" checked><label for="penOnly">Pen sahaja (palm rejection)</label></div>
-            <div class="range">Lebar Asas <input id="baseWidth" type="range" min="0.5" max="4" step="0.5" value="2"></div>
-            <button id="undoSign" class="btn">Undo</button>
-            <button id="clearSign" class="btn">Clear</button>
+            <div class="range">Lebar Garis <input id="baseWidth" type="range" min="0.5" max="6" step="0.5" value="2.5"></div>
           </div>
-          <canvas id="signPad" width="1600" height="600"></canvas>
-          <div style="opacity:.9;font-size:12px;margin-top:6px">Tandatangan dengan Apple Pencil, kemudian ia akan dimasukkan ke kanvas sijil di bawah.</div>
+          <div>
+            <button id="undoSig" class="btn">Undo</button>
+            <button id="clearSig" class="btn">Clear</button>
+            <button id="savePNG" class="btn" style="background:#ffd34d;color:#1b1b1b;border-color:#c9a43c;font-weight:700">Muat Turun PNG</button>
+            <button id="backToWin" class="btn">Tutup</button>
+          </div>
         </div>
 
         <div class="panel cert-canvas-wrap">
-          <canvas id="certCanvas" width="3508" height="2480"></canvas>
-          <div style="opacity:.9;font-size:12px;margin-top:6px">Nota: Sijil ini menggunakan fail yang anda upload di bahagian atas (bawah MP3).</div>
+          <!-- TANDATANGAN TERUS DI SINI -->
+          <canvas id="certCanvas" width="3508" height="2480" title="Tandatangan di atas sijil (guna Apple Pencil)"></canvas>
+          <div style="opacity:.9;font-size:12px;margin-top:6px">Nota: Pastikan anda telah upload fail sijil (PNG/JPG) di atas. Tandatangan terus pada sijil.</div>
         </div>
       </div>
     </div>
@@ -133,9 +125,8 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Muzik auto main bila menang. “Pergi ke Sijil” akan paparkan sijil yang anda upload. Muzik hanya mati bila tekan ×.</footer>
+<footer>Muzik auto main bila menang. “Pergi ke Sijil” paparkan sijil upload & boleh tandatangan terus di atasnya. Muzik hanya mati bila tekan ×.</footer>
 
-<!-- Audio -->
 <audio id="bgm" preload="auto" playsinline style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></audio>
 
 <script>
@@ -144,14 +135,14 @@ const $=s=>document.querySelector(s);
 function toast(m){const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',1600);}
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
-/* ===== canvas & layout (puzzle) ===== */
+/* ===== puzzle setup (ringkas, sama seperti versi sebelum) ===== */
 const stageEl=$("#stage");
 const board=$("#board"), ctx=board.getContext("2d",{alpha:false});
 let W=0,H=0,DPR=Math.max(1,window.devicePixelRatio||1);
 function resizeCanvas(){
   const pad=10, w=stageEl.clientWidth, h=Math.max(660,stageEl.clientHeight);
   W=w-pad; H=h-pad;
-  board.style.left=(pad/2)+"px"; board.style.top=(pad/2)+"px";
+  board.style.left=board.style.top=(pad/2)+"px";
   board.style.width=W+"px"; board.style.height=H+"px";
   board.width=Math.floor(W*DPR); board.height=Math.floor(H*DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -159,28 +150,19 @@ function resizeCanvas(){
 }
 addEventListener("resize",()=>{ resizeCanvas(); if(img && built) buildPuzzle(); });
 
-/* ===== state (puzzle) ===== */
 let img=null; let rows=3, cols=4;
-let pieces=[]; let targets=[];
-let OX=0, OY=0, CELL=0, GRID_W=0, GRID_H=0;
-let dragging=null, offX=0, offY=0;
-let showPreview=false, built=false;
+let pieces=[], targets=[], OX=0, OY=0, CELL=0, dragging=null, offX=0, showPreview=false, built=false;
 let trayW=0, margin=14, gutter=10;
-
-/* ===== Muzik kemenangan ===== */
 const bgm=$("#bgm"); let mp3URL=null;
+
 $("#volRange").addEventListener("input", e => bgm.volume=+e.target.value);
 bgm.volume=+$("#volRange").value;
 $("#mp3Input").addEventListener("change", e=>{
-  const f=e.target.files?.[0]; if(!f){ toast("Tiada fail muzik dipilih."); return; }
+  const f=e.target.files?.[0]; if(!f){ toast("Tiada fail muzik."); return; }
   if(mp3URL) URL.revokeObjectURL(mp3URL);
-  mp3URL = URL.createObjectURL(f);
-  bgm.src = mp3URL; bgm.load(); bgm.loop=true;
-  $("#mp3Name").textContent = "• " + f.name;
-  toast("Muzik kemenangan dimuat naik.");
+  mp3URL = URL.createObjectURL(f); bgm.src=mp3URL; bgm.load(); bgm.loop=true;
+  $("#mp3Name").textContent="• "+f.name; toast("Muzik dimuat naik.");
 });
-
-/* ===== Upload sijil (di header, bawah MP3) ===== */
 let certImg=null;
 $("#certUpload").addEventListener("change",e=>{
   const f=e.target.files?.[0]; if(!f){ certImg=null; $("#certName").textContent=""; renderCert(); return; }
@@ -189,7 +171,6 @@ $("#certUpload").addEventListener("change",e=>{
   r.readAsDataURL(f);
 });
 
-/* ===== controls asas ===== */
 const mapping={6:[2,3],8:[2,4],10:[2,5],12:[3,4],16:[4,4],20:[4,5],24:[3,8]};
 $("#piecesSel").addEventListener("change",e=>{ const v=+e.target.value; rows=mapping[v][0]; cols=mapping[v][1]; if(img) buildPuzzle(); });
 $("#previewBtn").addEventListener("click",function(){ showPreview=!showPreview; this.classList.toggle("active",showPreview); draw(); });
@@ -201,212 +182,80 @@ $("#imgInput").addEventListener("change",e=>{
   r.onload=ev=>{ img=new Image(); img.onload=()=>{ $("#celebrateImg").src=img.src; buildPuzzle(); }; img.src=ev.target.result; };
   r.readAsDataURL(f);
 });
-
-/* ===== fullscreen ===== */
 function isFS(){return document.fullscreenElement||document.webkitFullscreenElement;}
-$("#fsBtn").addEventListener("click",()=>{
-  try{
-    if(!isFS()){ const el=stageEl; (el.requestFullscreen||el.webkitRequestFullscreen).call(el); $("#fsBtn").textContent="Keluar Skrin Penuh"; }
-    else{ (document.exitFullscreen||document.webkitExitFullscreen).call(document); $("#fsBtn").textContent="Skrin Penuh"; }
-  }catch(e){}
-});
+$("#fsBtn").addEventListener("click",()=>{ try{ if(!isFS()){ const el=stageEl; (el.requestFullscreen||el.webkitRequestFullscreen).call(el); $("#fsBtn").textContent="Keluar Skrin Penuh"; } else { (document.exitFullscreen||document.webkitExitFullscreen).call(document); $("#fsBtn").textContent="Skrin Penuh"; } }catch(e){} });
 document.addEventListener("fullscreenchange",()=>{ $("#fsBtn").textContent=isFS()?"Keluar Skrin Penuh":"Skrin Penuh"; });
 
-/* ===== helper ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
-
-/* ===== bina puzzle (grid besar + tray kiri/kanan) ===== */
 function buildPuzzle(){
   pieces=[]; targets=[]; built=true;
-
   const usableH = H - margin*2;
-  const minTrayFrac = 0.10, maxTrayFrac = 0.22;
-  const pad=10, gap=8;
-
-  let tw = Math.max(Math.round(W*minTrayFrac), 84);
-  for(let i=0;i<4;i++){
-    const usableW = W - margin*2 - 2*tw - 2*gutter;
-    const cellW = Math.floor(usableW/cols);
-    const cellH = Math.floor(usableH/rows);
-    CELL = Math.max(48, Math.min(cellW, cellH));
-
-    const half = Math.ceil((rows*cols)/2);
-    const rmax = Math.max(1, Math.floor((H - margin*2 - pad*2)/(CELL+gap)));
-    const colsNeed = Math.max(1, Math.ceil(half/rmax));
-    const needW = pad*2 + colsNeed*CELL + (colsNeed-1)*gap;
-    const newTW = clamp(Math.max(tw, needW), Math.round(W*minTrayFrac), Math.round(W*maxTrayFrac));
-    if(Math.abs(newTW - tw) < 2) { tw=newTW; break; }
-    tw=newTW;
-  }
-  trayW = tw;
-
+  const tw = Math.max(Math.round(W*0.12),84); trayW=tw;
   const usableW2 = W - margin*2 - 2*trayW - 2*gutter;
   CELL = Math.max(48, Math.min(Math.floor(usableW2/cols), Math.floor(usableH/rows)));
-  GRID_W = CELL*cols; GRID_H = CELL*rows;
-  OX = Math.round(margin + trayW + gutter + ( (W - 2*(trayW+gutter) - margin*2) - GRID_W )/2);
-  OY = Math.round(margin + (usableH - GRID_H)/2);
-
-  const sW = img.width/cols, sH = img.height/rows;
+  OX = Math.round(margin + trayW + gutter + ( (W - 2*(trayW+gutter) - margin*2) - CELL*cols )/2);
+  OY = Math.round(margin + (usableH - CELL*rows)/2);
+  const sW=img.width/cols, sH=img.height/rows;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
-    const tx = OX + c*CELL, ty = OY + r*CELL;
-    const sx = c*sW, sy=r*sH;
-
+    const tx=OX+c*CELL, ty=OY+r*CELL;
+    const sx=c*sW, sy=r*sH;
     const can=document.createElement('canvas'); can.width=CELL*2; can.height=CELL*2;
-    const g=can.getContext('2d'); g.scale(2,2); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    const g=can.getContext('2d'); g.scale(2,2);
     rectPath(g,0,0,CELL,CELL); g.clip();
-    g.drawImage(img, sx, sy, sW, sH, 0,0, CELL, CELL);
-
+    g.drawImage(img,sx,sy,sW,sH,0,0,CELL,CELL);
     pieces.push({r,c,x:tx,y:ty,w:CELL,h:CELL,img:can,at:{x:0,y:0},placed:false});
     targets.push({x:tx,y:ty,r,c});
   }
   shuffle(); draw();
 }
-
-/* ===== letak kepingan di tray kiri/kanan ===== */
 function shuffle(){
   if(!built || !pieces.length){ draw(); return; }
-  const pad=10, gap=8;
-  const total=pieces.length, leftCount=Math.ceil(total/2), rightCount=total-leftCount;
-  const rmax = Math.max(1, Math.floor((H - margin*2 - pad*2) / (CELL + gap)));
-  const colsLeft  = Math.max(1, Math.ceil(leftCount  / rmax));
-  const colsRight = Math.max(1, Math.ceil(rightCount / rmax));
-  const leftX  = Math.round(margin);
-  const rightX = Math.round(W - margin - trayW);
-
-  let i=0;
-  for(; i<leftCount; i++){
-    const c = i % colsLeft, r = Math.floor(i / colsLeft);
-    pieces[i].at.x = leftX + pad + c*(CELL+gap);
-    pieces[i].at.y = Math.round(margin + pad + r*(CELL+gap));
-    pieces[i].placed=false;
-  }
-  for(let k=0; k<rightCount; k++){
-    const idx=i+k, c=k % colsRight, r=Math.floor(k/colsRight);
-    pieces[idx].at.x = rightX + pad + c*(CELL+gap);
-    pieces[idx].at.y = Math.round(margin + pad + r*(CELL+gap));
-    pieces[idx].placed=false;
-  }
+  const pad=10,gap=8,leftX=Math.round(margin),rightX=Math.round(W-margin-trayW);
+  const total=pieces.length,leftCount=Math.ceil(total/2),rightCount=total-leftCount;
+  const rmax=Math.max(1,Math.floor((H-margin*2-pad*2)/(CELL+gap)));
+  const colsLeft=Math.max(1,Math.ceil(leftCount/rmax));
+  const colsRight=Math.max(1,Math.ceil(rightCount/rmax));
+  let i=0; for(;i<leftCount;i++){ const c=i%colsLeft,r=Math.floor(i/colsLeft); pieces[i].at.x=leftX+pad+c*(CELL+gap); pieces[i].at.y=Math.round(margin+pad+r*(CELL+gap)); pieces[i].placed=false; }
+  for(let k=0;k<rightCount;k++){ const idx=i+k,c=k%colsRight,r=Math.floor(k/colsRight); pieces[idx].at.x=rightX+pad+c*(CELL+gap); pieces[idx].at.y=Math.round(margin+pad+r*(CELL+gap)); pieces[idx].placed=false; }
 }
-
-/* ===== lukis papan & kepingan ===== */
 function draw(){
   ctx.fillStyle='#071a2f'; ctx.fillRect(0,0,W,H);
   drawTray(Math.round(margin),Math.round(margin),Math.round(trayW),H-margin*2);
   drawTray(Math.round(W-margin-trayW),Math.round(margin),Math.round(trayW),H-margin*2);
-
   ctx.save(); ctx.fillStyle='#061a2e'; ctx.strokeStyle='rgba(255,255,255,.10)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.rect(OX-8||0, OY-8||0, (CELL*cols||0)+16, (CELL*rows||0)+16); ctx.fill(); ctx.stroke(); ctx.restore();
-
-  if(showPreview && img && CELL>0){
-    ctx.save(); ctx.globalAlpha=0.28;
-    ctx.drawImage(img,0,0,img.width,img.height, OX,OY, CELL*cols, CELL*rows);
-    ctx.restore();
-  }
+  ctx.beginPath(); ctx.rect(OX-8, OY-8, CELL*cols+16, CELL*rows+16); ctx.fill(); ctx.stroke(); ctx.restore();
+  if(showPreview && img){ ctx.save(); ctx.globalAlpha=0.28; ctx.drawImage(img,0,0,img.width,img.height, OX,OY, CELL*cols, CELL*rows); ctx.restore(); }
   for(const p of pieces){ if(p===dragging || p.placed) continue; drawPiece(p,true); }
   if(dragging) drawPiece(dragging,true,true);
   for(const p of pieces){ if(!p.placed || p===dragging) continue; drawPiece(p,false); }
 }
-function drawTray(x,y,w,h){
-  ctx.save(); ctx.fillStyle='rgba(11,42,74,.96)'; ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke(); ctx.restore();
-}
+function drawTray(x,y,w,h){ ctx.save(); ctx.fillStyle='rgba(11,42,74,.96)'; ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1; ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke(); ctx.restore(); }
 function drawPiece(p,floating,lift){
-  if(floating){
-    ctx.save(); if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
+  if(floating){ ctx.save(); if(lift){ ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=12; ctx.shadowOffsetY=6; }
     ctx.drawImage(p.img, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.restore();
-    ctx.save(); ctx.lineWidth=Math.max(1.1,p.w*0.04); ctx.strokeStyle='rgba(255,255,255,.95)';
-    rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.lineWidth=Math.max(1.1,p.w*0.04); ctx.strokeStyle='rgba(255,255,255,.95)'; rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
     ctx.save(); ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,.20)'; rectPath(ctx, Math.round(p.at.x), Math.round(p.at.y), p.w, p.h); ctx.stroke(); ctx.restore();
-  }else{
-    ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h);
-  }
+  }else{ ctx.drawImage(p.img, Math.round(p.x), Math.round(p.y), p.w, p.h); }
 }
-
-/* ===== Drag & Snap ===== */
-function pieceAt(px,py){
-  for(let i=pieces.length-1;i>=0;i--){
-    const p=pieces[i], x=p.at.x, y=p.at.y, w=p.w, h=p.h;
-    if(px>=x && px<=x+w && py>=y && py<=y+h) return p;
-  } return null;
-}
-board.addEventListener("pointerdown",e=>{
-  e.preventDefault();
-  try{ board.setPointerCapture(e.pointerId); }catch(_){}
-  const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  const p=pieceAt(x,y); if(!p) return;
-  dragging=p; offX=x-p.at.x; offY=y-p.at.y;
-  const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]);
-  requestAnimationFrame(draw);
-},{passive:false});
-board.addEventListener("pointermove",e=>{
-  if(!dragging) return; e.preventDefault();
-  const r=board.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-  dragging.at.x=x-offX; dragging.at.y=y-offY; requestAnimationFrame(draw);
-},{passive:false});
-board.addEventListener("pointerup",e=>{
-  if(!dragging) return; e.preventDefault();
-  const p = dragging; dragging = null;
-  const snap = findNearestTarget(p.at.x + p.w/2, p.at.y + p.h/2);
-  if(snap && !occupied(snap.r, snap.c)){
-    p.at.x = snap.x; p.at.y = snap.y;
-    p.placed = (p.r === snap.r && p.c === snap.c);
-  }
-  draw(); checkWin();
-},{passive:false});
-function findNearestTarget(cx,cy){
-  const GW = CELL*cols, GH = CELL*rows;
-  if(GW<=0 || GH<=0) return null;
-  if(cx>=OX && cx<=OX+GW && cy>=OY && cy<=OY+GH){
-    const c=Math.floor((cx-OX)/CELL), r=Math.floor((cy-OY)/CELL);
-    if(r>=0 && r<rows && c>=0 && c<cols) return targets[r*cols+c];
-  }
-  return null;
-}
+function pieceAt(px,py){ for(let i=pieces.length-1;i>=0;i--){ const p=pieces[i],x=p.at.x,y=p.at.y,w=p.w,h=p.h; if(px>=x&&px<=x+w&&py>=y&&py<=y+h) return p; } return null; }
+board.addEventListener("pointerdown",e=>{ e.preventDefault(); try{board.setPointerCapture(e.pointerId);}catch{} const r=board.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top; const p=pieceAt(x,y); if(!p) return; dragging=p; offX=x-p.at.x; offY=y-p.at.y; const i=pieces.indexOf(p); pieces.push(pieces.splice(i,1)[0]); requestAnimationFrame(draw);},{passive:false});
+board.addEventListener("pointermove",e=>{ if(!dragging) return; e.preventDefault(); const r=board.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top; dragging.at.x=x-offX; dragging.at.y=y-offY; requestAnimationFrame(draw);},{passive:false});
+board.addEventListener("pointerup",e=>{ if(!dragging) return; e.preventDefault(); const p=dragging; dragging=null; const snap=findNearestTarget(p.at.x+p.w/2,p.at.y+p.h/2); if(snap && !occupied(snap.r,snap.c)){ p.at.x=snap.x; p.at.y=snap.y; p.placed=(p.r===snap.r && p.c===snap.c); } draw(); checkWin(); },{passive:false});
+function findNearestTarget(cx,cy){ const GW=CELL*cols,GH=CELL*rows; if(cx>=OX&&cx<=OX+GW&&cy>=OY&&cy<=OY+GH){ const c=Math.floor((cx-OX)/CELL), r=Math.floor((cy-OY)/CELL); return targets[r*cols+c]; } return null; }
 function occupied(rr,cc){ return pieces.some(p=>p.placed && p.r===rr && p.c===cc); }
-
-/* ===== Menang: gambar besar + auto muzik ===== */
-function checkWin(){
-  for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; }
-  $("#celebrateImg").src = img?.src || "";
-  $("#celebrate").classList.add("show");
-  if(bgm.src){
-    try{ bgm.currentTime=0; bgm.loop=true; const pr=bgm.play(); if(pr && typeof pr.then==="function"){ pr.catch(()=>{}); } }catch(_){}
-  }
-}
+function checkWin(){ for(const p of pieces){ if(!(p.at.x===p.x && p.at.y===p.y)) return; } $("#celebrateImg").src=img?.src||""; $("#celebrate").classList.add("show"); if(bgm.src){ try{ bgm.currentTime=0; bgm.loop=true; const pr=bgm.play(); if(pr?.then) pr.catch(()=>{});}catch{} } }
 $("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); shuffle(); draw(); });
-$("#openCertWin").addEventListener("click",()=>{
-  if(!certImg){ toast("Sila upload Sijil (PNG/JPG) dahulu (di bawah MP3)."); return; }
-  $("#certPane").style.display='block'; renderCert();
-});
-$("#closeMusic").addEventListener("click",()=>{ try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){}
-  $("#celebrate").classList.remove("show");
-});
+$("#openCertWin").addEventListener("click",()=>{ if(!certImg){ toast("Sila upload Sijil (PNG/JPG) dahulu (di bawah MP3)."); return; } $("#certPane").style.display='block'; renderCert(); });
+$("#closeMusic").addEventListener("click",()=>{ try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch{} $("#celebrate").classList.remove("show"); });
 
-/* ==================== TANDATANGAN DIGITAL (Apple Pencil) ==================== */
-const signPad=$("#signPad"), sg=signPad.getContext("2d");
-let strokes=[], currentStroke=null;
-const penOnlyEl=$("#penOnly"), baseWidthEl=$("#baseWidth");
-function fitSignPadDPI(){ const r=signPad.getBoundingClientRect(), s=window.devicePixelRatio||1; signPad.width=Math.round(r.width*s); signPad.height=Math.round(r.height*s); sg.setTransform(s,0,0,s,0,0); redrawSign(); }
-new ResizeObserver(fitSignPadDPI).observe(signPad);
-function redrawSign(){ sg.clearRect(0,0,signPad.width,signPad.height); sg.fillStyle="#fff"; sg.fillRect(0,0,signPad.width,signPad.height); sg.lineJoin="round"; sg.lineCap="round";
-  for(const s of strokes){ sg.beginPath(); for(let i=0;i<s.pts.length;i++){ const pt=s.pts[i]; sg.lineWidth=Math.max(0.5,(s.base||2)* (pt.p? (0.5+pt.p):1)); if(i===0) sg.moveTo(pt.x,pt.y); else sg.lineTo(pt.x,pt.y);} sg.strokeStyle="#111"; sg.stroke(); } }
-function addPt(e){ const r=signPad.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; const p=(typeof e.pressure==="number"&&e.pressure>0)?e.pressure:1; currentStroke.pts.push({x,y,p}); }
-signPad.addEventListener("pointerdown",e=>{ if(penOnlyEl.checked && e.pointerType!=="pen") return; signPad.setPointerCapture(e.pointerId); currentStroke={pts:[],base:parseFloat(baseWidthEl.value)||2}; addPt(e); strokes.push(currentStroke); redrawSign(); });
-signPad.addEventListener("pointermove",e=>{ if(!currentStroke) return; if(penOnlyEl.checked && e.pointerType!=="pen") return; addPt(e); redrawSign(); });
-function endStroke(){ currentStroke=null; } signPad.addEventListener("pointerup",endStroke); signPad.addEventListener("pointercancel",endStroke);
-$("#undoSign").addEventListener("click",()=>{ strokes.pop(); redrawSign(); });
-$("#clearSign").addEventListener("click",()=>{ strokes.length=0; redrawSign(); });
-
-/* ==================== SIJIL (guna template upload) ==================== */
+/* ====== SIJIL: tandatangan terus atas canvas ====== */
 const certCanvas=$("#certCanvas"), cg=certCanvas.getContext("2d");
-$("#backToWin").addEventListener("click",()=>{ $("#certPane").style.display='none'; });
-$("#savePNG").addEventListener("click",()=>{ renderCert(); const a=document.createElement("a"); a.download="Sijil.png"; a.href=certCanvas.toDataURL("image/png"); a.click(); });
+let strokes=[], currentStroke=null;
+const penOnly=$("#penOnly"), baseWidth=$("#baseWidth");
 
 function renderCert(){
   const W=certCanvas.width, H=certCanvas.height;
   cg.fillStyle="#ffffff"; cg.fillRect(0,0,W,H);
-
-  // latar sijil dari fail upload (contain)
   if(certImg){
     const r=certImg.width/certImg.height, rb=W/H; let dw,dh;
     if(r>rb){ dw=W; dh=Math.round(W/r);} else { dh=H; dw=Math.round(H*r); }
@@ -417,19 +266,46 @@ function renderCert(){
     cg.fillStyle="#333"; cg.font="700 100px system-ui"; cg.textAlign="center";
     cg.fillText("Sila upload Sijil (PNG/JPG) di bahagian atas.", W/2, H/2);
   }
-
-  // letak tandatangan pada bahagian bawah tengah
-  const srcW=signPad.width, srcH=signPad.height;
-  if(srcW && srcH){
-    const targetW=Math.round(W*0.30), targetH=Math.round(targetW*(srcH/srcW));
-    const dx=Math.round((W-targetW)/2), dy=Math.round(H*0.78);
-    cg.drawImage(signPad,0,0,srcW,srcH, dx,dy,targetW,targetH);
-
-    // garis bawah sign
-    cg.strokeStyle="rgba(0,0,0,.45)"; cg.lineWidth=6; cg.beginPath(); cg.moveTo(W*0.35,H*0.92); cg.lineTo(W*0.65,H*0.92); cg.stroke();
-    cg.fillStyle="#111"; cg.font="700 52px system-ui"; cg.textAlign="center"; cg.fillText("Guru Besar", W/2, H*0.95);
+  // lukis tandatangan (strokes)
+  cg.lineJoin="round"; cg.lineCap="round"; cg.strokeStyle="#111";
+  for(const s of strokes){
+    cg.beginPath();
+    for(let i=0;i<s.pts.length;i++){
+      const pt=s.pts[i];
+      const w=Math.max(0.5,(s.base||2.5)*(pt.p? (0.5+pt.p):1));
+      cg.lineWidth=w;
+      if(i===0) cg.moveTo(pt.x,pt.y); else cg.lineTo(pt.x,pt.y);
+    }
+    cg.stroke();
   }
 }
+function addPt(e){
+  const rect=certCanvas.getBoundingClientRect();
+  const sx=certCanvas.width/rect.width, sy=certCanvas.height/rect.height;
+  const x=(e.clientX-rect.left)*sx, y=(e.clientY-rect.top)*sy;
+  const p=(typeof e.pressure==="number" && e.pressure>0)? e.pressure : 1;
+  currentStroke.pts.push({x,y,p});
+}
+certCanvas.addEventListener("pointerdown",e=>{
+  if(penOnly.checked && e.pointerType!=="pen") return;
+  certCanvas.setPointerCapture(e.pointerId);
+  currentStroke={pts:[], base:parseFloat(baseWidth.value)||2.5};
+  addPt(e); strokes.push(currentStroke); renderCert();
+});
+certCanvas.addEventListener("pointermove",e=>{
+  if(!currentStroke) return;
+  if(penOnly.checked && e.pointerType!=="pen") return;
+  addPt(e); renderCert();
+});
+function endStroke(){ currentStroke=null; }
+certCanvas.addEventListener("pointerup",endStroke);
+certCanvas.addEventListener("pointercancel",endStroke);
+
+$("#undoSig").addEventListener("click",()=>{ strokes.pop(); renderCert(); });
+$("#clearSig").addEventListener("click",()=>{ strokes.length=0; renderCert(); });
+$("#backToWin").addEventListener("click",()=>{ $("#certPane").style.display='none'; });
+
+$("#savePNG").addEventListener("click",()=>{ renderCert(); const a=document.createElement("a"); a.download="Sijil_Tandatangan.png"; a.href=certCanvas.toDataURL("image/png"); a.click(); });
 
 /* ===== mula ===== */
 resizeCanvas(); renderCert();
