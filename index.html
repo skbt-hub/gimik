@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Puzzle Malaysia — Auto Tray + Skala Kepingan + Sijil</title>
+<title>Puzzle Malaysia — Auto Tray + Skala + Sijil + Muzik Berterusan</title>
 <style>
 :root{--bg:#0a2540;--panel:#0f3359;--line:#0b2846;--text:#eaf3ff;--accent:#ffd34d;--muted:#b8d3f0}
 *{box-sizing:border-box}
@@ -90,7 +90,8 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 
     <!-- Overlay kemenangan -->
     <div id="celebrate" aria-live="polite">
-      <button id="closeMusic" class="closeX" title="Hentikan muzik & tutup">×</button>
+      <!-- ❌ SEKARANG: hanya tutup overlay, TIDAK hentikan muzik -->
+      <button id="closeOverlay" class="closeX" title="Tutup">×</button>
       <div class="big-wrap"><img id="celebrateImg" class="big-img" alt="Gambar kemenangan"></div>
       <div class="title">
         <div class="line1">SELAMAT MENYAMBUT BULAN KEBANGSAAN KE-68</div>
@@ -115,6 +116,7 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
             <button id="undoSig" class="btn">Undo</button>
             <button id="clearSig" class="btn">Clear</button>
             <button id="savePNG" class="btn" style="background:#ffd34d;color:#1b1b1b;border-color:#c9a43c;font-weight:700">Muat Turun PNG</button>
+            <!-- ❌ Butang ini akan matikan muzik bila ditutup -->
             <button id="backToWin" class="btn">Tutup</button>
           </div>
         </div>
@@ -129,7 +131,7 @@ footer{padding:10px 14px;color:var(--muted);font-size:12px}
 </main>
 
 <div id="toast" class="toast"></div>
-<footer>Tray auto-laras. Gunakan “Skala Kepingan” jika mahu kecil/besarkan. Muzik auto play selepas menang (dengan unlock audio iOS).</footer>
+<footer>Muzik kekal bermain selepas puzzle menang & semasa tandatangan. Muzik hanya berhenti apabila anda menutup paparan sijil.</footer>
 
 <audio id="bgm" preload="auto" playsinline></audio>
 
@@ -221,7 +223,7 @@ document.addEventListener("fullscreenchange",()=>{ $("#fsBtn").textContent=isFS(
 /* ===== helper ===== */
 function rectPath(c,x,y,w,h){ c.beginPath(); c.rect(x,y,w,h); c.closePath(); }
 
-/* ===== bina puzzle (tray auto-lebar + skala) ===== */
+/* ===== bina puzzle (tray auto + skala) ===== */
 function buildPuzzle(){
   pieces=[]; targets=[]; built=true;
 
@@ -229,7 +231,6 @@ function buildPuzzle(){
   const pad=10, gap=8;
   const minTrayFrac=0.10, maxTrayFrac=0.24;
 
-  // iterasi untuk dapatkan trayW mencukupi
   let tw=Math.max(Math.round(W*minTrayFrac),84);
   for(let iter=0; iter<6; iter++){
     const usableW = W - margin*2 - 2*tw - 2*gutter;
@@ -272,7 +273,7 @@ function buildPuzzle(){
   shuffle(); draw();
 }
 
-/* ===== letak kepingan dalam tray (multi lajur) ===== */
+/* ===== tray (multi lajur) ===== */
 function shuffle(){
   if(!built || !pieces.length){ draw(); return; }
   const pad=10, gap=8;
@@ -384,9 +385,8 @@ function checkWin(){
 }
 $("#againBtn").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); $("#enableSound").style.display="none"; shuffle(); draw(); });
 $("#openCertWin").addEventListener("click",()=>{ if(!certImg){ toast("Sila upload Sijil (PNG/JPG) dahulu (di bawah MP3)."); return; } $("#certPane").style.display='block'; renderCert(); });
-$("#closeMusic").addEventListener("click",()=>{ try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){}
-  $("#celebrate").classList.remove("show");
-});
+/* ❌ Tutup overlay kemenangan – TIDAK hentikan muzik */
+$("#closeOverlay").addEventListener("click",()=>{ $("#celebrate").classList.remove("show"); });
 
 /* ===== sijil: tandatangan terus ===== */
 const certCanvas=$("#certCanvas"), cg=certCanvas.getContext("2d");
@@ -443,11 +443,16 @@ certCanvas.addEventListener("pointercancel",endStroke);
 
 $("#undoSig").addEventListener("click",()=>{ strokes.pop(); renderCert(); });
 $("#clearSig").addEventListener("click",()=>{ strokes.length=0; renderCert(); });
-$("#backToWin").addEventListener("click",()=>{ $("#certPane").style.display='none'; });
+/* ❌ Tutup sijil – di SINI barulah hentikan muzik */
+$("#backToWin").addEventListener("click",()=>{ 
+  $("#certPane").style.display='none'; 
+  try{ if(!bgm.paused){ bgm.pause(); bgm.currentTime=0; } }catch(_){}
+});
 $("#savePNG").addEventListener("click",()=>{ renderCert(); const a=document.createElement("a"); a.download="Sijil_Tandatangan.png"; a.href=certCanvas.toDataURL("image/png"); a.click(); });
 
 /* ===== mula ===== */
-resizeCanvas(); renderCert();
+resizeCanvas();
+renderCert();
 </script>
 </body>
 </html>
